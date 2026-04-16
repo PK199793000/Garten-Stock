@@ -258,4 +258,54 @@ html,body{height:100%;background:var(--c-bg);color:var(--c-text);font-family:var
 
 .toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:var(--c-surface2);border:1px solid var(--c-border2);color:var(--c-text);padding:10px 18px;border-radius:30px;font-size:13px;font-weight:600;z-index:200;pointer-events:none;opacity:0;transition:opacity .2s;white-space:nowrap;font-family:var(--font-mono);}
 .toast.show{opacity:1;}
-</style>
+
+/* ── THÈME CLAIR ── */
+:root.light{
+  --c-bg:#f0ede8;--c-surface:#ffffff;--c-surface2:#f5f2ed;
+  --c-border:#d8d4ce;--c-border2:#c8c4be;--c-text:#1a1a1a;--c-muted:#888882;
+}
+:root.light .topbar{background:var(--c-bg);}
+:root.light .navbar{background:var(--c-bg);}
+:root.light .pin-overlay{background:rgba(240,237,232,.97);}
+:root.light .login-screen{background:var(--c-bg);}
+
+/* ── THEME TOGGLE ── */
+.theme-toggle{background:transparent;border:1px solid var(--c-border2);border-radius:20px;padding:3px 8px;font-size:14px;cursor:pointer;flex-shrink:0;line-height:1;}
+
+/* ── DAY SELECTOR ── */
+.day-selector{display:flex;gap:4px;flex-shrink:0;}
+.day-chip{padding:3px 10px;border-radius:20px;border:1px solid var(--c-border2);background:var(--c-surface);font-size:11px;font-weight:700;cursor:pointer;color:var(--c-muted);font-family:var(--font-mono);letter-spacing:.04em;}
+.day-chip.active{background:var(--c-accent);color:#000;border-color:var(--c-accent);}
+
+/* ── ALERTES STOCK BAS ── */
+.pcard--alert{border-color:var(--c-red) !important;}
+.pcard--alert .pcard-stock strong{color:var(--c-red) !important;}
+.stock-alert-badge{display:inline-block;background:var(--c-red);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:10px;margin-left:4px;vertical-align:middle;letter-spacing:.04em;}
+
+/* ── LOG DELETE BUTTON ── */
+.log-delete{width:24px;height:24px;border-radius:6px;background:transparent;border:1px solid rgba(224,82,82,.3);color:var(--c-red);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;opacity:0;transition:opacity .15s;}
+.log-entry:hover .log-delete{opacity:1;}
+
+/* ── CHARTS ── */
+.chart-wrap{padding:0 0 16px;position:relative;}
+.chart-title{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--c-muted);margin-bottom:8px;}
+
+/* ── HISTORY SCREEN ── */
+.history-event-card{background:var(--c-surface);border:1px solid var(--c-border);border-radius:12px;padding:14px 16px;margin-bottom:10px;cursor:pointer;}
+.history-event-card:active{background:var(--c-surface2);}
+.history-event-name{font-size:15px;font-weight:700;margin-bottom:4px;}
+.history-event-meta{font-size:11px;color:var(--c-muted);font-family:var(--font-mono);}
+.history-back{font-size:13px;color:var(--c-accent);cursor:pointer;font-family:var(--font-mono);padding:12px 16px;display:block;}
+
+/* ── VUE GLOBALE (cross-bars) ── */
+.global-table{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:16px;overflow-x:auto;display:block;}
+.global-table th{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--c-muted);padding:5px 8px;text-align:right;border-bottom:1px solid var(--c-border);white-space:nowrap;}
+.global-table th:first-child{text-align:left;}
+.global-table td{padding:6px 8px;border-bottom:1px solid var(--c-border);font-family:var(--font-mono);text-align:right;white-space:nowrap;}
+.global-table td:first-child{font-family:var(--font-head);font-weight:600;text-align:left;}
+.global-table tr:last-child td{border-bottom:none;}
+
+/* ── CONFIG JOUR ── */
+.cfg-day-item{display:flex;align-items:center;gap:8px;background:var(--c-surface);border:1px solid var(--c-border);border-radius:10px;padding:10px 12px;margin-bottom:8px;}
+.cfg-day-item strong{flex:1;font-size:14px;font-family:var(--font-mono);}
+.cfg-day-active-badge{font-size:10px;padding:2px 8px;border-radius:20px;background:rgba(232,197,71,.15);color:var(--c-accent);font-weight:700;}

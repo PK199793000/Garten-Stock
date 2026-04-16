@@ -1,0 +1,14 @@
+{
+  "name": "Gärten Stock",
+  "short_name": "GärtenStock",
+  "description": "Suivi de stock en temps réel pour événements Gärten Drinks",
+  "start_url": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d0d0d",
+  "theme_color": "#e8c547",
+  "icons": [
+    { "src": "logo.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
