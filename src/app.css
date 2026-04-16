@@ -286,6 +286,17 @@ html,body{height:100%;background:var(--c-bg);color:var(--c-text);font-family:var
 .log-delete{width:24px;height:24px;border-radius:6px;background:transparent;border:1px solid rgba(224,82,82,.3);color:var(--c-red);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;opacity:0;transition:opacity .15s;}
 .log-entry:hover .log-delete{opacity:1;}
 
+/* ── LOG REASON (offert justification) ── */
+.log-reason{grid-column:1/-1;font-size:11px;color:var(--c-muted);font-family:var(--font-mono);padding:2px 0 0 0;font-style:italic;}
+
+/* ── MODAL REASON FIELD ── */
+.m-reason-field{display:none;margin:8px 0 4px;padding:10px 12px;background:rgba(232,197,71,.07);border:1px solid rgba(232,197,71,.3);border-radius:10px;}
+.m-reason-label{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--c-accent);font-family:var(--font-mono);display:block;margin-bottom:6px;}
+.m-reason-label span{color:var(--c-red);}
+.m-reason-input{width:100%;background:transparent;border:none;border-bottom:1px solid rgba(232,197,71,.4);color:var(--c-text);font-family:var(--font-head);font-size:13px;padding:4px 0;resize:none;outline:none;}
+.m-reason-input::placeholder{color:var(--c-muted);}
+.m-reason-input:focus{border-bottom-color:var(--c-accent);}
+
 /* ── CHARTS ── */
 .chart-wrap{padding:0 0 16px;position:relative;}
 .chart-title{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--c-muted);margin-bottom:8px;}

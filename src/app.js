@@ -190,6 +190,43 @@ function umRoleChange() {
     wrap.appendChild(chip);
   });
   addPageAccessField();
+  addAllowedTypesField(role);
+}
+
+const TYPE_DEFAULTS = {
+  directeur:  ['reassort','casse','staff','offert'],
+  chef_bar:   ['reassort','casse','staff','offert'],
+  magasinier: ['reassort','casse'],
+};
+
+function addAllowedTypesField(role) {
+  const existing = document.getElementById('um-types-field');
+  if (existing) existing.remove();
+  const field = document.createElement('div');
+  field.className = 'um-field';
+  field.id = 'um-types-field';
+  field.innerHTML = '<label>Types de saisie autorisés</label>';
+  const wrap = document.createElement('div');
+  wrap.className = 'um-bars-wrap';
+  wrap.id = 'um-types-wrap';
+  const defaults = TYPE_DEFAULTS[role] || ['reassort','casse','staff','offert'];
+  const typeLabels = {reassort:'Reassort', casse:'Casse', staff:'Staff', offert:'Offert'};
+  Object.keys(typeLabels).forEach(t => {
+    const chip = document.createElement('div');
+    chip.className = 'um-bar-chip' + (defaults.includes(t) ? ' selected' : '');
+    chip.textContent = typeLabels[t];
+    chip.dataset.tid = t;
+    if (defaults.includes(t)) { chip.style.background = 'var(--c-accent)'; chip.style.color = '#000'; }
+    chip.onclick = () => {
+      chip.classList.toggle('selected');
+      chip.style.background = chip.classList.contains('selected') ? 'var(--c-accent)' : '';
+      chip.style.color = chip.classList.contains('selected') ? '#000' : 'var(--c-muted)';
+    };
+    wrap.appendChild(chip);
+  });
+  field.appendChild(wrap);
+  const modal = document.querySelector('.user-modal');
+  modal.insertBefore(field, modal.lastElementChild);
 }
 
 function addPageAccessField() {
@@ -232,10 +269,11 @@ async function saveUser() {
   const role  = document.getElementById('um-role').value;
   if (!id || !rawPw) { showToast('Identifiant et mot de passe requis'); return; }
   if (ALL_USERS.find(u => u.id === id)) { showToast('Identifiant déjà utilisé'); return; }
-  const barIds = [...document.querySelectorAll('#um-bars-wrap .um-bar-chip.selected')].map(c => c.dataset.bid);
-  const pages  = [...document.querySelectorAll('#um-pages-wrap .um-bar-chip.selected')].map(c => c.dataset.pid);
+  const barIds      = [...document.querySelectorAll('#um-bars-wrap .um-bar-chip.selected')].map(c => c.dataset.bid);
+  const pages       = [...document.querySelectorAll('#um-pages-wrap .um-bar-chip.selected')].map(c => c.dataset.pid);
+  const allowedTypes= [...document.querySelectorAll('#um-types-wrap .um-bar-chip.selected')].map(c => c.dataset.tid);
   const pwHash = await sha256(rawPw);
-  const newUser = {id, pw: pwHash, role, barIds, pages, displayName: id};
+  const newUser = {id, pw: pwHash, role, barIds, pages, allowedTypes, displayName: id};
   ALL_USERS.push(newUser);
   if (window._fbSaveUsers) await window._fbSaveUsers(ALL_USERS);
   renderCfgUsers();
@@ -512,7 +550,8 @@ function buildProducts() {
     else if (pct > .6) sc = '#e87a3a';
     const unitStr = p.pack > 1 ? 'pack ×'+p.pack : (p.liters ? p.liters+'L / unité' : 'unité');
     const ps = JSON.stringify(p).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-    const ptypes = p.types || ['reassort','casse','staff','offert'];
+    const userAllowed = CURRENT_USER?.allowedTypes || ['reassort','casse','staff','offert'];
+    const ptypes = (p.types || ['reassort','casse','staff','offert']).filter(t => userAllowed.includes(t));
     const TYPE_LABELS = {reassort:'REASSORT', casse:'CASSE', staff:'STAFF', offert:'OFFERT'};
     const actionBtns = ptypes.map(t =>
       `<button class="pact-btn ${t}" onclick='openModal(${ps},"${t}")'>${TYPE_LABELS[t]||t.toUpperCase()}</button>`
@@ -546,8 +585,14 @@ function openModal(p, type) {
   document.getElementById('m-name').textContent = p.name;
   document.getElementById('m-sub').textContent  = (BARS.find(b=>b.id===currentBar)||{name:''}).name + ' · ' + (p.pack > 1 ? 'pack ×'+p.pack : (p.liters ? p.liters+'L' : 'unité'));
   updateModalQty();
-  buildTypeGrid(p.types || ['reassort','casse','staff','offert']);
+  const userAllowed = CURRENT_USER?.allowedTypes || ['reassort','casse','staff','offert'];
+  const availTypes = (p.types || ['reassort','casse','staff','offert']).filter(t => userAllowed.includes(t));
+  buildTypeGrid(availTypes);
+  // Si le type demandé n'est pas disponible, prendre le premier accessible
+  if (!availTypes.includes(mType)) mType = availTypes[0] || type;
   updateTypeUI();
+  toggleReasonField(mType === 'offert');
+  document.getElementById('m-reason').value = '';
   document.getElementById('overlay').classList.add('open');
 }
 
@@ -575,9 +620,22 @@ function updateModalQty() {
 }
 
 function adjQty(d) { mQty = Math.max(1, mQty+d); updateModalQty(); }
-function setType(t) { mType = t; updateTypeUI(); }
+
+function setType(t) {
+  mType = t;
+  updateTypeUI();
+  toggleReasonField(t === 'offert');
+  if (t !== 'offert') document.getElementById('m-reason').value = '';
+}
+
+function toggleReasonField(show) {
+  const el = document.getElementById('m-reason-field');
+  if (el) el.style.display = show ? 'block' : 'none';
+}
+
 function updateTypeUI() {
-  const types = mProduct ? (mProduct.types || ['reassort','casse','staff','offert']) : [];
+  const userAllowed = CURRENT_USER?.allowedTypes || ['reassort','casse','staff','offert'];
+  const types = mProduct ? (mProduct.types || ['reassort','casse','staff','offert']).filter(t => userAllowed.includes(t)) : [];
   types.forEach(t => {
     const el = document.getElementById('to-'+t);
     if (el) el.className = 'type-opt'+(t===mType?' sel-'+t:'');
@@ -586,12 +644,22 @@ function updateTypeUI() {
 
 function confirmEntry() {
   if (!mProduct) return;
+  let reason = '';
+  if (mType === 'offert') {
+    reason = (document.getElementById('m-reason').value || '').trim();
+    if (!reason) {
+      document.getElementById('m-reason').focus();
+      showToast('Un motif est requis pour un offert');
+      return;
+    }
+  }
   const bar = BARS.find(b => b.id === currentBar);
   log.unshift({
     id: Date.now(), time: now(), day: currentDay,
     barId: currentBar, barName: bar.name,
     productId: mProduct.id, productName: mProduct.name, pack: mProduct.pack,
     qty: mQty, units: mQty * mProduct.pack, type: mType,
+    reason,
     userId:      CURRENT_USER ? CURRENT_USER.id : 'inconnu',
     userDisplay: CURRENT_USER ? (CURRENT_USER.displayName||CURRENT_USER.id) : 'inconnu',
     userRole:    CURRENT_USER ? CURRENT_USER.role : '',
@@ -627,7 +695,8 @@ function buildLog() {
       <span class="log-qty">${e.qty}${e.pack>1?' pkt':' u.'}</span>
       <span class="log-type-pill pill-${e.type}">${e.type.toUpperCase()}</span>
       ${e.userDisplay ? `<span style="font-size:10px;color:var(--c-muted);font-family:var(--font-mono);flex-shrink:0;">${e.userDisplay}</span>` : ''}
-      ${canDelete ? `<button class="log-delete" onclick="deleteLogEntry(${e.id})" title="Annuler cette saisie">✕</button>` : ''}`;
+      ${canDelete ? `<button class="log-delete" onclick="deleteLogEntry(${e.id})" title="Annuler cette saisie">✕</button>` : ''}
+      ${e.reason ? `<div class="log-reason">💬 ${e.reason}</div>` : ''}`;
     el.appendChild(div);
   });
 }
