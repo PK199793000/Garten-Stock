@@ -329,7 +329,7 @@ let days = ['j1'];
 let DAY_STOCKS = { j1: {} }; // stocks de départ par jour, copié depuis STOCKS à la création de J1
 
 let currentBar  = BARS[0].id;
-let mQty = 1, mType = 'reassort', mProduct = null;
+let mQty = 1, mType = 'reassort', mProduct = null, mUnitMode = false;
 let log = [];
 let idCounter = 100;
 
@@ -350,7 +350,9 @@ function calcStock(barId, productId) {
   const init = (STOCKS[barId] && STOCKS[barId][productId]) || 0;
   const dayLog = log.filter(e => e.barId === barId && e.productId === productId && e.day === currentDay);
   const reassort = dayLog.filter(e => e.type === 'reassort').reduce((s,e) => s + e.qty, 0);
-  const out      = dayLog.filter(e => e.type !== 'reassort').reduce((s,e) => s + e.qty, 0);
+  const out = dayLog.filter(e => e.type !== 'reassort').reduce((s,e) => {
+    return s + (e.unitMode && e.pack > 1 ? e.qty / e.pack : e.qty);
+  }, 0);
   return init + reassort - out;
 }
 
@@ -563,7 +565,7 @@ function buildProducts() {
       <div class="pcard-head">
         <div class="pcard-icon">${p.icon}</div>
         <div class="pcard-name"><strong>${p.name}</strong><span>${unitStr} · stock : ${init}</span></div>
-        <div class="pcard-stock"><strong style="color:${sc}">${remaining}</strong>restants${alertBadge}</div>
+        <div class="pcard-stock"><strong style="color:${sc}">${Number.isInteger(remaining) ? remaining : remaining.toFixed(1)}</strong>restants${alertBadge}</div>
       </div>
       <div class="pcard-actions" style="grid-template-columns:repeat(${ptypes.length},1fr)">${actionBtns}</div>`;
     el.appendChild(div);
@@ -581,16 +583,16 @@ const ALL_TYPES = {
 };
 
 function openModal(p, type) {
-  mProduct = p; mQty = 1; mType = type;
+  mProduct = p; mQty = 1; mType = type; mUnitMode = false;
   document.getElementById('m-name').textContent = p.name;
   document.getElementById('m-sub').textContent  = (BARS.find(b=>b.id===currentBar)||{name:''}).name + ' · ' + (p.pack > 1 ? 'pack ×'+p.pack : (p.liters ? p.liters+'L' : 'unité'));
   updateModalQty();
   const userAllowed = CURRENT_USER?.allowedTypes || ['reassort','casse','staff','offert'];
   const availTypes = (p.types || ['reassort','casse','staff','offert']).filter(t => userAllowed.includes(t));
   buildTypeGrid(availTypes);
-  // Si le type demandé n'est pas disponible, prendre le premier accessible
   if (!availTypes.includes(mType)) mType = availTypes[0] || type;
   updateTypeUI();
+  updateUnitModeToggle();
   toggleReasonField(mType === 'offert');
   document.getElementById('m-reason').value = '';
   document.getElementById('overlay').classList.add('open');
@@ -613,19 +615,54 @@ function buildTypeGrid(types) {
 function updateModalQty() {
   document.getElementById('m-qty').textContent = mQty;
   let hint = ''+mQty;
-  if (mProduct.pack > 1) hint += ' pack'+(mQty>1?'s':'')+' = '+(mQty*mProduct.pack)+' unités';
-  else if (mProduct.liters) hint += ' × '+mProduct.liters+'L = '+(mQty*mProduct.liters)+'L';
-  else hint += ' unité'+(mQty>1?'s':'');
+  if (mUnitMode) {
+    hint += ' unité'+(mQty>1?'s':'');
+    if (mProduct.pack > 1) hint += ' ('+mQty+'/'+mProduct.pack+' du pack)';
+  } else if (mProduct.pack > 1) {
+    hint += ' pack'+(mQty>1?'s':'')+' = '+(mQty*mProduct.pack)+' unités';
+  } else if (mProduct.liters) {
+    hint += ' × '+mProduct.liters+'L = '+(mQty*mProduct.liters)+'L';
+  } else {
+    hint += ' unité'+(mQty>1?'s':'');
+  }
   document.getElementById('m-hint').textContent = hint;
 }
 
 function adjQty(d) { mQty = Math.max(1, mQty+d); updateModalQty(); }
 
+function toggleUnitMode() {
+  mUnitMode = !mUnitMode;
+  mQty = 1;
+  const btn = document.getElementById('unit-mode-btn');
+  if (btn) {
+    btn.classList.toggle('active', mUnitMode);
+    btn.textContent = mUnitMode ? '📦 Par pack' : '🔢 Par unité';
+  }
+  updateModalQty();
+}
+
+function updateUnitModeToggle() {
+  const wrap = document.getElementById('unit-mode-wrap');
+  if (!wrap) return;
+  const canUnit = mProduct && mProduct.pack > 1 && ['casse','offert','staff'].includes(mType);
+  wrap.style.display = canUnit ? 'flex' : 'none';
+  if (!canUnit && mUnitMode) {
+    mUnitMode = false;
+    const btn = document.getElementById('unit-mode-btn');
+    if (btn) { btn.classList.remove('active'); btn.textContent = '🔢 Par unité'; }
+  }
+}
+
 function setType(t) {
   mType = t;
+  mUnitMode = false;
   updateTypeUI();
+  updateUnitModeToggle();
   toggleReasonField(t === 'offert');
   if (t !== 'offert') document.getElementById('m-reason').value = '';
+  const btn = document.getElementById('unit-mode-btn');
+  if (btn) { btn.classList.remove('active'); btn.textContent = '🔢 Par unité'; }
+  updateModalQty();
 }
 
 function toggleReasonField(show) {
@@ -654,11 +691,12 @@ function confirmEntry() {
     }
   }
   const bar = BARS.find(b => b.id === currentBar);
+  const units = mUnitMode ? mQty : mQty * (mProduct.pack || 1);
   log.unshift({
     id: Date.now(), time: now(), day: currentDay,
     barId: currentBar, barName: bar.name,
     productId: mProduct.id, productName: mProduct.name, pack: mProduct.pack,
-    qty: mQty, units: mQty * mProduct.pack, type: mType,
+    qty: mQty, units, type: mType, unitMode: mUnitMode,
     reason,
     userId:      CURRENT_USER ? CURRENT_USER.id : 'inconnu',
     userDisplay: CURRENT_USER ? (CURRENT_USER.displayName||CURRENT_USER.id) : 'inconnu',
@@ -667,7 +705,8 @@ function confirmEntry() {
   saveAll();
   closeOverlay();
   buildProducts();
-  showToast('✓ ' + mProduct.name + ' · ' + mQty + (mProduct.pack>1?' pack'+(mQty>1?'s':''):' u.') + ' · ' + mType);
+  const qtyLabel = mUnitMode ? mQty+' u.' : mQty+(mProduct.pack>1?' pack'+(mQty>1?'s':''):' u.');
+  showToast('✓ ' + mProduct.name + ' · ' + qtyLabel + ' · ' + mType);
 }
 
 function overlayClick(e) { if(e.target === document.getElementById('overlay')) closeOverlay(); }
@@ -692,7 +731,7 @@ function buildLog() {
       <span class="log-time">${e.time}</span>
       <span class="log-bar">${e.barName}</span>
       <span class="log-product">${e.productName}</span>
-      <span class="log-qty">${e.qty}${e.pack>1?' pkt':' u.'}</span>
+      <span class="log-qty">${e.unitMode ? e.qty+' u.' : e.qty+(e.pack>1?' pkt':' u.')}</span>
       <span class="log-type-pill pill-${e.type}">${e.type.toUpperCase()}</span>
       ${e.userDisplay ? `<span style="font-size:10px;color:var(--c-muted);font-family:var(--font-mono);flex-shrink:0;">${e.userDisplay}</span>` : ''}
       ${canDelete ? `<button class="log-delete" onclick="deleteLogEntry(${e.id})" title="Annuler cette saisie">✕</button>` : ''}
