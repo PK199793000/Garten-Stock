@@ -63,6 +63,8 @@ html,body{height:100%;background:var(--c-bg);color:var(--c-text);font-family:var
 .pill-casse{background:rgba(224,82,82,.15);color:var(--c-red);}
 .pill-staff{background:rgba(82,196,122,.15);color:var(--c-green);}
 .pill-offert{background:rgba(155,127,232,.15);color:var(--c-purple);}
+.pill-retour{background:rgba(91,196,196,.15);color:#5bc4c4;}
+.pill-entame{background:rgba(232,122,58,.15);color:var(--c-orange);}
 .log-empty{text-align:center;padding:40px 16px;color:var(--c-muted);font-size:13px;}
 
 /* ── RECAP ── */
@@ -76,6 +78,8 @@ html,body{height:100%;background:var(--c-bg);color:var(--c-text);font-family:var
 .kpi-val.red{color:var(--c-red);}
 .kpi-val.green{color:var(--c-green);}
 .kpi-val.purple{color:var(--c-purple);}
+.kpi-val.teal{color:#5bc4c4;}
+.kpi-val.orange{color:var(--c-orange);}
 .rtable{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:12px;}
 .rtable th{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--c-muted);padding:5px 6px;text-align:left;border-bottom:1px solid var(--c-border);}
 .rtable td{padding:7px 6px;border-bottom:1px solid var(--c-border);font-family:var(--font-mono);}

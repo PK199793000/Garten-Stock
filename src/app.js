@@ -320,9 +320,9 @@ function umRoleChange() {
 }
 
 const TYPE_DEFAULTS = {
-  directeur:  ['reassort','casse','staff','offert'],
-  chef_bar:   ['reassort','casse','staff','offert'],
-  magasinier: ['reassort','casse'],
+  directeur:  ['reassort','casse','staff','offert','retour','entame'],
+  chef_bar:   ['reassort','casse','staff','offert','retour','entame'],
+  magasinier: ['reassort','casse','retour','entame'],
 };
 
 function addAllowedTypesField(role) {
@@ -335,8 +335,8 @@ function addAllowedTypesField(role) {
   const wrap = document.createElement('div');
   wrap.className = 'um-bars-wrap';
   wrap.id = 'um-types-wrap';
-  const defaults = TYPE_DEFAULTS[role] || ['reassort','casse','staff','offert'];
-  const typeLabels = {reassort:'Sortie bar', casse:'Casse', staff:'Staff', offert:'Offert'};
+  const defaults = TYPE_DEFAULTS[role] || ['reassort','casse','staff','offert','retour','entame'];
+  const typeLabels = {reassort:'Sortie bar', casse:'Casse', staff:'Staff', offert:'Offert', retour:'Retour camion', entame:'Entamé perdu'};
   Object.keys(typeLabels).forEach(t => {
     const chip = document.createElement('div');
     chip.className = 'um-bar-chip' + (defaults.includes(t) ? ' selected' : '');
@@ -431,14 +431,14 @@ let BARS = [
 ];
 
 let ALL_PRODUCTS = [
-  {id:'fut_blonde', name:'Fût Blonde 30L',      icon:'🍺', pack:1,  liters:30, bars:['b1','b2','b3','b4','b5'], types:['reassort','casse','staff','offert'], alertSeuil:1},
-  {id:'fut_brune',  name:'Fût Brune 30L',       icon:'🍺', pack:1,  liters:30, bars:['b1','b2','b3','b4'],     types:['reassort','casse','staff','offert'], alertSeuil:1},
-  {id:'biere_btle', name:'Bière bouteille 33cl', icon:'🍾', pack:24, bars:['b1','b2','b3','b4'],               types:['reassort','casse','staff','offert'], alertSeuil:2},
+  {id:'fut_blonde', name:'Fût Blonde 30L',      icon:'🍺', pack:1,  liters:30, bars:['b1','b2','b3','b4','b5'], types:['reassort','casse','staff','offert','retour','entame'], alertSeuil:1},
+  {id:'fut_brune',  name:'Fût Brune 30L',       icon:'🍺', pack:1,  liters:30, bars:['b1','b2','b3','b4'],     types:['reassort','casse','staff','offert','retour','entame'], alertSeuil:1},
+  {id:'biere_btle', name:'Bière bouteille 33cl', icon:'🍾', pack:24, bars:['b1','b2','b3','b4'],               types:['reassort','casse','staff','offert','retour','entame'], alertSeuil:2},
   {id:'eau_50',     name:'Eau 50cl',             icon:'💧', pack:24, bars:['b1','b2','b3','b4','b5'],          types:['reassort','casse','staff'],           alertSeuil:2},
   {id:'soda_33',    name:'Soda 33cl',            icon:'🥤', pack:24, bars:['b1','b2','b3','b4','b5'],          types:['reassort','casse','staff'],           alertSeuil:2},
-  {id:'vin_bib',    name:'Vin rouge BIB 10L',    icon:'🍷', pack:1,  liters:10, bars:['b1','b2','b3','b4','b5'], types:['reassort','casse','staff','offert'], alertSeuil:1},
+  {id:'vin_bib',    name:'Vin rouge BIB 10L',    icon:'🍷', pack:1,  liters:10, bars:['b1','b2','b3','b4','b5'], types:['reassort','casse','staff','offert','retour','entame'], alertSeuil:1},
   {id:'champ_6',    name:'Champagne 75cl',       icon:'🥂', pack:6,  bars:['b5'],                             types:['reassort','casse','offert'],          alertSeuil:2},
-  {id:'spirit',     name:'Spiritueux 70cl',      icon:'🥃', pack:1,  bars:['b5'],                             types:['reassort','casse','staff','offert'],  alertSeuil:2},
+  {id:'spirit',     name:'Spiritueux 70cl',      icon:'🥃', pack:1,  bars:['b5'],                             types:['reassort','casse','staff','offert','retour','entame'],  alertSeuil:2},
 ];
 
 let STOCKS = {
@@ -694,10 +694,10 @@ function buildProducts() {
     else if (pct > .6) sc = '#e87a3a';
     const unitStr = p.pack > 1 ? 'pack ×'+p.pack : (p.liters ? p.liters+'L / unité' : 'unité');
     const ps = JSON.stringify(p).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-    const userAllowed = CURRENT_USER?.allowedTypes || ['reassort','casse','staff','offert'];
-    const ptypes = (p.types || ['reassort','casse','staff','offert']).filter(t => userAllowed.includes(t));
+    const userAllowed = CURRENT_USER?.allowedTypes || ['reassort','casse','staff','offert','retour','entame'];
+    const ptypes = (p.types || ['reassort','casse','staff','offert','retour','entame']).filter(t => userAllowed.includes(t));
     const TYPE_LABELS = TYPE_DISPLAY;
-    const canQuickAdd = ['reassort','staff'];
+    const canQuickAdd = ['reassort','staff','retour'];
     const actionBtns = ptypes.map(t => {
       const lp = canQuickAdd.includes(t)
         ? `onmousedown='startLongPress(${ps},"${t}")' onmouseup='cancelLongPress()' onmouseleave='cancelLongPress()' ontouchstart='startLongPress(${ps},"${t}");event.preventDefault();' ontouchend='cancelLongPress();'`
@@ -722,27 +722,34 @@ function buildProducts() {
 //  SAISIE MODAL
 // ════════════════════════════════
 const ALL_TYPES = {
-  reassort: {label:'Sortie bar', sub:'sortie du camion vers le bar'},
-  casse:    {label:'Casse',      sub:'bris / détérioration'},
-  staff:    {label:'Staff',      sub:'consommé équipe'},
-  offert:   {label:'Offert',     sub:'gratuit / artiste'},
+  reassort: {label:'Sortie bar',    sub:'sortie du camion vers le bar'},
+  casse:    {label:'Casse',         sub:'bris / détérioration'},
+  staff:    {label:'Staff',         sub:'consommé équipe'},
+  offert:   {label:'Offert',        sub:'gratuit / artiste'},
+  retour:   {label:'Retour camion', sub:'pack non consommé retourné au camion'},
+  entame:   {label:'Entamé perdu',  sub:'reste d\'un pack ouvert, non récupérable'},
 };
 
-// Labels d'affichage centralisés (la clé interne 'reassort' ne change pas)
+// Labels d'affichage centralisés (la clé interne reste identique)
 const TYPE_DISPLAY = {
   reassort: 'SORTIE BAR',
   casse:    'CASSE',
   staff:    'STAFF',
   offert:   'OFFERT',
+  retour:   'RETOUR',
+  entame:   'ENTAMÉ',
 };
+
+// Types qui sont des "pertes" réelles (retour n'en est pas un)
+const LOSS_TYPES = ['casse','staff','offert','entame'];
 
 function openModal(p, type) {
   mProduct = p; mQty = 1; mType = type; mUnitMode = false;
   document.getElementById('m-name').textContent = p.name;
   document.getElementById('m-sub').textContent  = (BARS.find(b=>b.id===currentBar)||{name:''}).name + ' · ' + (p.pack > 1 ? 'pack ×'+p.pack : (p.liters ? p.liters+'L' : 'unité'));
   updateModalQty();
-  const userAllowed = CURRENT_USER?.allowedTypes || ['reassort','casse','staff','offert'];
-  const availTypes = (p.types || ['reassort','casse','staff','offert']).filter(t => userAllowed.includes(t));
+  const userAllowed = CURRENT_USER?.allowedTypes || ['reassort','casse','staff','offert','retour','entame'];
+  const availTypes = (p.types || ['reassort','casse','staff','offert','retour','entame']).filter(t => userAllowed.includes(t));
   buildTypeGrid(availTypes);
   if (!availTypes.includes(mType)) mType = availTypes[0] || type;
   updateTypeUI();
@@ -801,7 +808,7 @@ function toggleUnitMode() {
 function updateUnitModeToggle() {
   const wrap = document.getElementById('unit-mode-wrap');
   if (!wrap) return;
-  const canUnit = mProduct && mProduct.pack > 1 && ['casse','offert','staff'].includes(mType);
+  const canUnit = mProduct && mProduct.pack > 1 && ['casse','offert','staff','retour','entame'].includes(mType);
   wrap.style.display = canUnit ? 'flex' : 'none';
   if (!canUnit && mUnitMode) {
     mUnitMode = false;
@@ -848,8 +855,8 @@ function setRecipientField(show) {
 }
 
 function updateTypeUI() {
-  const userAllowed = CURRENT_USER?.allowedTypes || ['reassort','casse','staff','offert'];
-  const types = mProduct ? (mProduct.types || ['reassort','casse','staff','offert']).filter(t => userAllowed.includes(t)) : [];
+  const userAllowed = CURRENT_USER?.allowedTypes || ['reassort','casse','staff','offert','retour','entame'];
+  const types = mProduct ? (mProduct.types || ['reassort','casse','staff','offert','retour','entame']).filter(t => userAllowed.includes(t)) : [];
   types.forEach(t => {
     const el = document.getElementById('to-'+t);
     if (el) el.className = 'type-opt'+(t===mType?' sel-'+t:'');
@@ -1025,28 +1032,30 @@ function buildRecap() {
     if (!bLog.length) return;
     hasData = true;
 
-    const tr = bLog.filter(e=>e.type==='reassort').reduce((s,e)=>s+e.units,0);
-    const tc = bLog.filter(e=>e.type==='casse').reduce((s,e)=>s+e.units,0);
-    const ts = bLog.filter(e=>e.type==='staff').reduce((s,e)=>s+e.units,0);
-    const to = bLog.filter(e=>e.type==='offert').reduce((s,e)=>s+e.units,0);
+    const tr  = bLog.filter(e=>e.type==='reassort').reduce((s,e)=>s+e.units,0);
+    const tc  = bLog.filter(e=>e.type==='casse').reduce((s,e)=>s+e.units,0);
+    const ts  = bLog.filter(e=>e.type==='staff').reduce((s,e)=>s+e.units,0);
+    const to  = bLog.filter(e=>e.type==='offert').reduce((s,e)=>s+e.units,0);
+    const trt = bLog.filter(e=>e.type==='retour').reduce((s,e)=>s+e.units,0);
+    const ten = bLog.filter(e=>e.type==='entame').reduce((s,e)=>s+e.units,0);
 
     const byP = {};
     bLog.forEach(e => {
-      if (!byP[e.productId]) byP[e.productId] = {name:e.productName, pack:e.pack, reassort:0, casse:0, staff:0, offert:0};
+      if (!byP[e.productId]) byP[e.productId] = {name:e.productName, pack:e.pack, reassort:0, casse:0, staff:0, offert:0, retour:0, entame:0};
       if (byP[e.productId][e.type] !== undefined) byP[e.productId][e.type] += e.qty;
     });
 
     const depackItems = [];
     Object.values(byP).forEach(p => {
       if (p.pack <= 1) return;
-      const tot = (p.reassort||0)+(p.casse||0)+(p.staff||0)+(p.offert||0);
+      const tot = (p.reassort||0)+(p.casse||0)+(p.staff||0)+(p.offert||0)+(p.retour||0)+(p.entame||0);
       const frac = tot - Math.floor(tot);
       const left = frac > 0 ? Math.round(p.pack - frac*p.pack) : 0;
       if (left > 0) depackItems.push({name:p.name, left});
     });
 
     const rows = Object.values(byP).map(p =>
-      `<tr><td>${p.name}</td><td style="color:var(--c-accent)">${p.reassort||'—'}</td><td style="color:var(--c-red)">${p.casse||'—'}</td><td style="color:var(--c-green)">${p.staff||'—'}</td><td style="color:var(--c-purple)">${p.offert||'—'}</td></tr>`
+      `<tr><td>${p.name}</td><td style="color:var(--c-accent)">${p.reassort||'—'}</td><td style="color:var(--c-red)">${p.casse||'—'}</td><td style="color:var(--c-green)">${p.staff||'—'}</td><td style="color:var(--c-purple)">${p.offert||'—'}</td><td style="color:#5bc4c4">${p.retour||'—'}</td><td style="color:var(--c-orange)">${p.entame||'—'}</td></tr>`
     ).join('');
     const depackHTML = depackItems.length ? `<div class="depack-block"><div class="depack-block-title">⚠ Stock dépaqueté non retournable</div>${depackItems.map(d=>`<div class="depack-row2"><span>${d.name}</span><span>${d.left} unités restantes</span></div>`).join('')}</div>` : '';
 
@@ -1059,12 +1068,12 @@ function buildRecap() {
       <div class="recap-bar-title" style="color:${bar.color}">${bar.name}</div>
       <div class="kpi-row">
         <div class="kpi"><div class="kpi-label">Sortie bar</div><div class="kpi-val yellow">${tr}</div></div>
-        <div class="kpi"><div class="kpi-label">Pertes totales</div><div class="kpi-val red">${tc+ts+to}</div></div>
-        <div class="kpi"><div class="kpi-label">Staff</div><div class="kpi-val green">${ts}</div></div>
-        <div class="kpi"><div class="kpi-label">Offerts</div><div class="kpi-val purple">${to}</div></div>
+        <div class="kpi"><div class="kpi-label">Pertes réelles</div><div class="kpi-val red">${tc+ts+to+ten}</div></div>
+        <div class="kpi"><div class="kpi-label">Retours camion</div><div class="kpi-val teal">${trt}</div></div>
+        <div class="kpi"><div class="kpi-label">Entamés perdus</div><div class="kpi-val orange">${ten}</div></div>
       </div>
       ${depackHTML}
-      <table class="rtable"><thead><tr><th>Produit</th><th>Sortie bar</th><th>Casse</th><th>Staff</th><th>Offert</th></tr></thead><tbody>${rows}</tbody></table>
+      <table class="rtable"><thead><tr><th>Produit</th><th>Sortie bar</th><th>Casse</th><th>Staff</th><th>Offert</th><th>Retour</th><th>Entamé</th></tr></thead><tbody>${rows}</tbody></table>
       ${buildOffertDetail(bLog)}
       ${buildCasseDetail(bLog)}
       <div class="chart-wrap print-hide"><div class="chart-title">Consommation par produit</div><canvas id="${chartBarId}" height="160"></canvas></div>
@@ -1280,7 +1289,7 @@ let cfgBars = [], cfgProds = [];
 
 function openConfig() {
   cfgBars  = BARS.map(b => ({...b}));
-  cfgProds = ALL_PRODUCTS.map(p => ({...p, bars:[...p.bars], types:[...(p.types||['reassort','casse','staff','offert'])]}));
+  cfgProds = ALL_PRODUCTS.map(p => ({...p, bars:[...p.bars], types:[...(p.types||['reassort','casse','staff','offert','retour','entame'])]}));
   document.getElementById('cfg-event').value = document.getElementById('event-name').textContent;
   renderCfgDays();
   renderCfgBars();
@@ -1365,8 +1374,8 @@ function renderCfgProds() {
     typesWrap.innerHTML = '<div class="cfg-types-lbl">Types de sortie disponibles :</div>';
     const typesRow = document.createElement('div');
     typesRow.className = 'cfg-types-checks';
-    const allT = ['reassort','casse','staff','offert'];
-    const typeLabels = {reassort:'SORTIE BAR',casse:'CASSE',staff:'STAFF',offert:'OFFERT'};
+    const allT = ['reassort','casse','staff','offert','retour','entame'];
+    const typeLabels = {reassort:'SORTIE BAR',casse:'CASSE',staff:'STAFF',offert:'OFFERT',retour:'RETOUR',entame:'ENTAMÉ'};
     const enabledTypes = p.types || allT;
     allT.forEach(t => {
       const on  = enabledTypes.includes(t);
@@ -1592,7 +1601,7 @@ function deleteBar(barId) {
 
 function addProduct() {
   const icon = PRODUCT_ICONS[cfgProds.length % PRODUCT_ICONS.length];
-  cfgProds.push({id: uid(), name:'Nouveau produit', icon, pack:1, bars:[], types:['reassort','casse','staff','offert'], alertSeuil:2});
+  cfgProds.push({id: uid(), name:'Nouveau produit', icon, pack:1, bars:[], types:['reassort','casse','staff','offert','retour','entame'], alertSeuil:2});
   renderCfgProds();
   setTimeout(() => { document.getElementById('cfg-overlay').scrollTop = 99999; }, 50);
 }
@@ -1610,7 +1619,7 @@ function saveConfig() {
   const evName = document.getElementById('cfg-event').value.trim();
   if (evName) document.getElementById('event-name').textContent = evName;
   BARS = cfgBars.map(b => ({...b}));
-  ALL_PRODUCTS = cfgProds.map(p => ({...p, bars:[...p.bars], types:[...(p.types||['reassort','casse','staff','offert'])]}));
+  ALL_PRODUCTS = cfgProds.map(p => ({...p, bars:[...p.bars], types:[...(p.types||['reassort','casse','staff','offert','retour','entame'])]}));
   BARS.forEach(b => { if (!STOCKS[b.id]) STOCKS[b.id] = {}; });
   if (!BARS.find(b => b.id === currentBar)) currentBar = BARS[0]?.id;
   saveAll();
@@ -1672,7 +1681,7 @@ function exportCSV() {
 
   let csv = '\uFEFF';
   csv += `--- COMPARATIF STOCK vs VENTES${dayStr} (à rapprocher du rapport Kappture Qty) ---\n`;
-  csv += 'Événement,Jour,Bar,Produit,Stock départ (cdt),Stock départ (unités),Sortie bar (cdt),Sortie bar (unités),Casse (unités),Staff (unités),Offert (unités),Total sorti (unités)\n';
+  csv += 'Événement,Jour,Bar,Produit,Stock départ (cdt),Stock départ (unités),Sortie bar (cdt),Sortie bar (unités),Casse (unités),Staff (unités),Offert (unités),Retour camion (unités),Entamé perdu (unités),Total sorti (unités)\n';
 
   BARS.forEach(bar => {
     const barLog = activeLog.filter(e => e.barId === bar.id);
@@ -1689,8 +1698,10 @@ function exportCSV() {
       const casseU      = pLog.filter(e=>e.type==='casse').reduce((s,e)=>s+e.units,0);
       const staffU      = pLog.filter(e=>e.type==='staff').reduce((s,e)=>s+e.units,0);
       const offertU     = pLog.filter(e=>e.type==='offert').reduce((s,e)=>s+e.units,0);
-      const totalU      = reassortU + casseU + staffU + offertU;
-      csv += `"${evName}","${currentDay.toUpperCase()}","${bar.name}","${pName}",${stockCdt},${stockUnits},${reassortCdt},${reassortU},${casseU},${staffU},${offertU},${totalU}\n`;
+      const retourU     = pLog.filter(e=>e.type==='retour').reduce((s,e)=>s+e.units,0);
+      const entameU     = pLog.filter(e=>e.type==='entame').reduce((s,e)=>s+e.units,0);
+      const totalU      = reassortU + casseU + staffU + offertU + retourU + entameU;
+      csv += `"${evName}","${currentDay.toUpperCase()}","${bar.name}","${pName}",${stockCdt},${stockUnits},${reassortCdt},${reassortU},${casseU},${staffU},${offertU},${retourU},${entameU},${totalU}\n`;
     });
   });
 
@@ -1760,18 +1771,20 @@ function showHistoryDetail(evName, data) {
   bars.forEach(bar => {
     const bLog = activeLog.filter(e => e.barId === bar.id);
     if (!bLog.length) return;
-    const tr = bLog.filter(e=>e.type==='reassort').reduce((s,e)=>s+e.units,0);
-    const tc = bLog.filter(e=>e.type==='casse').reduce((s,e)=>s+e.units,0);
-    const ts = bLog.filter(e=>e.type==='staff').reduce((s,e)=>s+e.units,0);
-    const to = bLog.filter(e=>e.type==='offert').reduce((s,e)=>s+e.units,0);
+    const tr  = bLog.filter(e=>e.type==='reassort').reduce((s,e)=>s+e.units,0);
+    const tc  = bLog.filter(e=>e.type==='casse').reduce((s,e)=>s+e.units,0);
+    const ts  = bLog.filter(e=>e.type==='staff').reduce((s,e)=>s+e.units,0);
+    const to  = bLog.filter(e=>e.type==='offert').reduce((s,e)=>s+e.units,0);
+    const trt = bLog.filter(e=>e.type==='retour').reduce((s,e)=>s+e.units,0);
+    const ten = bLog.filter(e=>e.type==='entame').reduce((s,e)=>s+e.units,0);
     const sec = document.createElement('div');
     sec.className = 'recap-bar-section';
     sec.innerHTML = `<div class="recap-bar-title" style="color:${bar.color||'var(--c-accent)'}">${bar.name}</div>
       <div class="kpi-row">
         <div class="kpi"><div class="kpi-label">Sortie bar</div><div class="kpi-val yellow">${tr}</div></div>
-        <div class="kpi"><div class="kpi-label">Pertes</div><div class="kpi-val red">${tc+ts+to}</div></div>
-        <div class="kpi"><div class="kpi-label">Staff</div><div class="kpi-val green">${ts}</div></div>
-        <div class="kpi"><div class="kpi-label">Offerts</div><div class="kpi-val purple">${to}</div></div>
+        <div class="kpi"><div class="kpi-label">Pertes</div><div class="kpi-val red">${tc+ts+to+ten}</div></div>
+        <div class="kpi"><div class="kpi-label">Retours</div><div class="kpi-val teal">${trt}</div></div>
+        <div class="kpi"><div class="kpi-label">Entamés</div><div class="kpi-val orange">${ten}</div></div>
       </div>`;
     el.appendChild(sec);
   });
