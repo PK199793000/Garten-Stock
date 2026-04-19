@@ -72,6 +72,54 @@ function toggleTheme() {
 }
 
 // ════════════════════════════════
+//  SESSION PERSISTANTE (1h inactivité)
+// ════════════════════════════════
+const SESSION_KEY     = 'garten_session';
+const SESSION_TIMEOUT = 60 * 60 * 1000; // 1 heure en ms
+
+function saveSession(userId) {
+  localStorage.setItem(SESSION_KEY, JSON.stringify({ userId, lastActive: Date.now() }));
+}
+
+function clearSession() {
+  localStorage.removeItem(SESSION_KEY);
+}
+
+function touchSession() {
+  const raw = localStorage.getItem(SESSION_KEY);
+  if (!raw) return;
+  const s = JSON.parse(raw);
+  s.lastActive = Date.now();
+  localStorage.setItem(SESSION_KEY, JSON.stringify(s));
+}
+
+function getValidSession() {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    const s = JSON.parse(raw);
+    if (Date.now() - s.lastActive > SESSION_TIMEOUT) { clearSession(); return null; }
+    return s;
+  } catch { return null; }
+}
+
+function initActivityTracking() {
+  ['click','touchstart','keydown','scroll'].forEach(ev =>
+    document.addEventListener(ev, touchSession, { passive: true })
+  );
+  // Vérifie l'expiration toutes les 5 minutes
+  setInterval(() => {
+    if (CURRENT_USER && !getValidSession()) {
+      CURRENT_USER = null;
+      clearSession();
+      document.getElementById('login-screen').classList.add('active');
+      document.getElementById('app').style.display = 'none';
+      showToast('Session expirée — veuillez vous reconnecter');
+    }
+  }, 5 * 60 * 1000);
+}
+
+// ════════════════════════════════
 //  AUTH SYSTEM
 // ════════════════════════════════
 let CURRENT_USER = null;
@@ -84,10 +132,41 @@ async function initAuth() {
     ALL_USERS = [{id:'directeur', pw:defaultHash, role:'directeur', barIds:[], displayName:'Directeur'}];
     if (window._fbSaveUsers) await window._fbSaveUsers(ALL_USERS);
   }
+
+  // ── Tentative de reprise de session ──
+  const session = getValidSession();
+  if (session) {
+    const user = ALL_USERS.find(u => u.id === session.userId);
+    if (user) {
+      const page = location.pathname.split('/').pop().replace('.html','') || 'index';
+      const hasAccess = user.role === 'directeur' || !user.pages?.length || user.pages.includes(page);
+      if (hasAccess) {
+        activateUser(user);
+        return; // pas besoin d'afficher le login
+      }
+    }
+    clearSession();
+  }
+
   document.getElementById('login-screen').classList.add('active');
   document.getElementById('app').style.display = 'none';
   document.getElementById('login-pw').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
   document.getElementById('login-id').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('login-pw').focus(); });
+}
+
+// Factorisation : active l'utilisateur (login manuel ou reprise session)
+function activateUser(user) {
+  CURRENT_USER = user;
+  document.getElementById('login-screen').classList.remove('active');
+  document.getElementById('app').style.display = 'flex';
+  requestNotificationPermission();
+  const badge = document.getElementById('user-badge');
+  if (badge) {
+    const roleLabels = {directeur:'Directeur', chef_bar:'Chef de bar', magasinier:'Magasinier'};
+    badge.textContent = (user.displayName || user.id) + ' · ' + (roleLabels[user.role] || user.role);
+  }
+  applyRoleRestrictions();
+  loadAll();
 }
 
 async function doLogin() {
@@ -116,25 +195,15 @@ async function doLogin() {
     return;
   }
 
-  CURRENT_USER = user;
   errEl.textContent = '';
-  document.getElementById('login-screen').classList.remove('active');
-  document.getElementById('app').style.display = 'flex';
-  requestNotificationPermission();
-
-  const badge = document.getElementById('user-badge');
-  if (badge) {
-    const roleLabels = {directeur:'Directeur', chef_bar:'Chef de bar', magasinier:'Magasinier'};
-    badge.textContent = (user.displayName || user.id) + ' · ' + (roleLabels[user.role] || user.role);
-  }
-
-  applyRoleRestrictions();
-  loadAll();
+  saveSession(user.id);
+  activateUser(user);
 }
 
 function doLogout() {
   if (!confirm('Se déconnecter ?')) return;
   CURRENT_USER = null;
+  clearSession();
   document.getElementById('login-id').value = '';
   document.getElementById('login-pw').value = '';
   document.getElementById('login-error').textContent = '';
@@ -1727,6 +1796,7 @@ async function init() {
   updateClock();
   setInterval(updateClock, 15000);
   initSwipe();
+  initActivityTracking();
   await initAuth();
   document.addEventListener('click', e => {
     if (!e.target.closest('.emoji-picker-wrap')) {
