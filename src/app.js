@@ -336,7 +336,7 @@ function addAllowedTypesField(role) {
   wrap.className = 'um-bars-wrap';
   wrap.id = 'um-types-wrap';
   const defaults = TYPE_DEFAULTS[role] || ['reassort','casse','staff','offert'];
-  const typeLabels = {reassort:'Reassort', casse:'Casse', staff:'Staff', offert:'Offert'};
+  const typeLabels = {reassort:'Sortie bar', casse:'Casse', staff:'Staff', offert:'Offert'};
   Object.keys(typeLabels).forEach(t => {
     const chip = document.createElement('div');
     chip.className = 'um-bar-chip' + (defaults.includes(t) ? ' selected' : '');
@@ -696,7 +696,7 @@ function buildProducts() {
     const ps = JSON.stringify(p).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
     const userAllowed = CURRENT_USER?.allowedTypes || ['reassort','casse','staff','offert'];
     const ptypes = (p.types || ['reassort','casse','staff','offert']).filter(t => userAllowed.includes(t));
-    const TYPE_LABELS = {reassort:'REASSORT', casse:'CASSE', staff:'STAFF', offert:'OFFERT'};
+    const TYPE_LABELS = TYPE_DISPLAY;
     const canQuickAdd = ['reassort','staff'];
     const actionBtns = ptypes.map(t => {
       const lp = canQuickAdd.includes(t)
@@ -722,10 +722,18 @@ function buildProducts() {
 //  SAISIE MODAL
 // ════════════════════════════════
 const ALL_TYPES = {
-  reassort: {label:'Reassort', sub:'réappro camion'},
-  casse:    {label:'Casse',    sub:'bris / détérioration'},
-  staff:    {label:'Staff',    sub:'consommé équipe'},
-  offert:   {label:'Offert',   sub:'gratuit / artiste'},
+  reassort: {label:'Sortie bar', sub:'sortie du camion vers le bar'},
+  casse:    {label:'Casse',      sub:'bris / détérioration'},
+  staff:    {label:'Staff',      sub:'consommé équipe'},
+  offert:   {label:'Offert',     sub:'gratuit / artiste'},
+};
+
+// Labels d'affichage centralisés (la clé interne 'reassort' ne change pas)
+const TYPE_DISPLAY = {
+  reassort: 'SORTIE BAR',
+  casse:    'CASSE',
+  staff:    'STAFF',
+  offert:   'OFFERT',
 };
 
 function openModal(p, type) {
@@ -947,7 +955,7 @@ function buildLog() {
       <span class="log-bar">${e.barName}</span>
       <span class="log-product">${e.productName}</span>
       <span class="log-qty">${e.unitMode ? e.qty+' u.' : e.qty+(e.pack>1?' pkt':' u.')}</span>
-      <span class="log-type-pill pill-${e.type}">${e.type.toUpperCase()}</span>
+      <span class="log-type-pill pill-${e.type}">${TYPE_DISPLAY[e.type] || e.type.toUpperCase()}</span>
       ${e.userDisplay ? `<span style="font-size:10px;color:var(--c-muted);font-family:var(--font-mono);flex-shrink:0;">${e.userDisplay}</span>` : ''}
       ${canDelete ? `<button class="log-delete" onclick="deleteLogEntry(${e.id})" title="Annuler cette saisie">✕</button>` : ''}
       ${e.reason ? `<div class="log-reason">💬 ${e.reason}${e.recipient ? ` · <strong>${e.recipient}</strong>` : ''}</div>` : ''}`;
@@ -1050,13 +1058,13 @@ function buildRecap() {
     sec.innerHTML = `
       <div class="recap-bar-title" style="color:${bar.color}">${bar.name}</div>
       <div class="kpi-row">
-        <div class="kpi"><div class="kpi-label">Reassort</div><div class="kpi-val yellow">${tr}</div></div>
+        <div class="kpi"><div class="kpi-label">Sortie bar</div><div class="kpi-val yellow">${tr}</div></div>
         <div class="kpi"><div class="kpi-label">Pertes totales</div><div class="kpi-val red">${tc+ts+to}</div></div>
         <div class="kpi"><div class="kpi-label">Staff</div><div class="kpi-val green">${ts}</div></div>
         <div class="kpi"><div class="kpi-label">Offerts</div><div class="kpi-val purple">${to}</div></div>
       </div>
       ${depackHTML}
-      <table class="rtable"><thead><tr><th>Produit</th><th>Reassort</th><th>Casse</th><th>Staff</th><th>Offert</th></tr></thead><tbody>${rows}</tbody></table>
+      <table class="rtable"><thead><tr><th>Produit</th><th>Sortie bar</th><th>Casse</th><th>Staff</th><th>Offert</th></tr></thead><tbody>${rows}</tbody></table>
       ${buildOffertDetail(bLog)}
       ${buildCasseDetail(bLog)}
       <div class="chart-wrap print-hide"><div class="chart-title">Consommation par produit</div><canvas id="${chartBarId}" height="160"></canvas></div>
@@ -1079,7 +1087,7 @@ function buildRecap() {
         data: {
           labels: prodNames,
           datasets: [
-            {label:'Reassort', data:reassortD, backgroundColor:'rgba(232,197,71,.7)'},
+            {label:'Sortie bar', data:reassortD, backgroundColor:'rgba(232,197,71,.7)'},
             {label:'Casse',    data:casseD,    backgroundColor:'rgba(224,82,82,.7)'},
             {label:'Staff',    data:staffD,    backgroundColor:'rgba(82,196,122,.7)'},
             {label:'Offert',   data:offertD,   backgroundColor:'rgba(155,127,232,.7)'},
@@ -1108,7 +1116,7 @@ function buildRecap() {
         data: {
           labels: tsLabels,
           datasets: [
-            {label:'Reassort', data:tDataRea, borderColor:'#e8c547', backgroundColor:'rgba(232,197,71,.15)', tension:.3, fill:true, pointRadius:2},
+            {label:'Sortie bar', data:tDataRea, borderColor:'#e8c547', backgroundColor:'rgba(232,197,71,.15)', tension:.3, fill:true, pointRadius:2},
             {label:'Casse',    data:tDataCas, borderColor:'#e05252', backgroundColor:'rgba(224,82,82,.1)',   tension:.3, fill:true, pointRadius:2},
             {label:'Staff',    data:tDataSta, borderColor:'#52c47a', backgroundColor:'rgba(82,196,122,.1)', tension:.3, fill:true, pointRadius:2},
             {label:'Offert',   data:tDataOff, borderColor:'#9b7fe8', backgroundColor:'rgba(155,127,232,.1)',tension:.3, fill:true, pointRadius:2},
@@ -1358,7 +1366,7 @@ function renderCfgProds() {
     const typesRow = document.createElement('div');
     typesRow.className = 'cfg-types-checks';
     const allT = ['reassort','casse','staff','offert'];
-    const typeLabels = {reassort:'REASSORT',casse:'CASSE',staff:'STAFF',offert:'OFFERT'};
+    const typeLabels = {reassort:'SORTIE BAR',casse:'CASSE',staff:'STAFF',offert:'OFFERT'};
     const enabledTypes = p.types || allT;
     allT.forEach(t => {
       const on  = enabledTypes.includes(t);
@@ -1664,7 +1672,7 @@ function exportCSV() {
 
   let csv = '\uFEFF';
   csv += `--- COMPARATIF STOCK vs VENTES${dayStr} (à rapprocher du rapport Kappture Qty) ---\n`;
-  csv += 'Événement,Jour,Bar,Produit,Stock départ (cdt),Stock départ (unités),Reassort (cdt),Reassort (unités),Casse (unités),Staff (unités),Offert (unités),Total sorti (unités)\n';
+  csv += 'Événement,Jour,Bar,Produit,Stock départ (cdt),Stock départ (unités),Sortie bar (cdt),Sortie bar (unités),Casse (unités),Staff (unités),Offert (unités),Total sorti (unités)\n';
 
   BARS.forEach(bar => {
     const barLog = activeLog.filter(e => e.barId === bar.id);
@@ -1760,7 +1768,7 @@ function showHistoryDetail(evName, data) {
     sec.className = 'recap-bar-section';
     sec.innerHTML = `<div class="recap-bar-title" style="color:${bar.color||'var(--c-accent)'}">${bar.name}</div>
       <div class="kpi-row">
-        <div class="kpi"><div class="kpi-label">Reassort</div><div class="kpi-val yellow">${tr}</div></div>
+        <div class="kpi"><div class="kpi-label">Sortie bar</div><div class="kpi-val yellow">${tr}</div></div>
         <div class="kpi"><div class="kpi-label">Pertes</div><div class="kpi-val red">${tc+ts+to}</div></div>
         <div class="kpi"><div class="kpi-label">Staff</div><div class="kpi-val green">${ts}</div></div>
         <div class="kpi"><div class="kpi-label">Offerts</div><div class="kpi-val purple">${to}</div></div>
