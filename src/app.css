@@ -364,6 +364,39 @@ html,body{height:100%;background:var(--c-bg);color:var(--c-text);font-family:var
 .export-btn{flex:1;padding:14px;background:var(--c-surface);border:1px solid var(--c-border2);border-radius:12px;font-family:var(--font-head);font-size:13px;font-weight:700;cursor:pointer;color:var(--c-text);letter-spacing:.02em;}
 .export-btn-print{border-color:rgba(232,197,71,.3);color:var(--c-accent);}
 
+/* ── FIN D'ÉVÉNEMENT BAR ── */
+.fin-event-bar{padding:12px 16px 8px;display:flex;justify-content:center;}
+.fin-event-btn{width:100%;max-width:400px;padding:16px;background:rgba(232,122,58,.12);border:1.5px solid rgba(232,122,58,.45);border-radius:14px;font-family:var(--font-head);font-size:15px;font-weight:700;letter-spacing:.06em;color:#e87a3a;cursor:pointer;transition:background .15s,border-color .15s;}
+.fin-event-btn:active{background:rgba(232,122,58,.22);border-color:#e87a3a;}
+
+/* ── FIN OVERLAY (wizard) ── */
+.fin-overlay{display:none;position:fixed;inset:0;z-index:150;background:var(--c-bg);flex-direction:column;overflow:hidden;}
+.fin-overlay.open{display:flex;}
+.fin-panel{display:flex;flex-direction:column;height:100%;overflow:hidden;}
+.fin-topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:var(--c-surface);border-bottom:1px solid var(--c-border2);flex-shrink:0;}
+.fin-back{font-family:var(--font-mono);font-size:13px;color:var(--c-muted);cursor:pointer;padding:4px 0;}
+.fin-back:active{color:var(--c-text);}
+.fin-main-title{font-family:var(--font-head);font-size:15px;font-weight:700;letter-spacing:.04em;}
+.fin-step-badge{font-family:var(--font-mono);font-size:12px;color:var(--c-muted);background:var(--c-surface2);border-radius:20px;padding:3px 10px;}
+.fin-intro{padding:16px 16px 8px;}
+.fin-intro-title{font-family:var(--font-head);font-size:17px;font-weight:700;letter-spacing:.03em;margin-bottom:6px;}
+.fin-intro-sub{font-size:13px;color:var(--c-muted);line-height:1.5;}
+#fin-step1,#fin-step2{display:flex;flex-direction:column;flex:1;overflow:hidden;}
+#fin-products-list,#fin-inv-list{flex:1;overflow-y:auto;padding:0 16px 8px;}
+.fin-prod-row,.fin-inv-row{background:var(--c-surface);border:1px solid var(--c-border2);border-radius:14px;padding:14px;margin-bottom:10px;}
+.fin-prod-head{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+.fin-prod-icon{font-size:22px;}
+.fin-prod-name{flex:1;font-weight:700;font-size:14px;}
+.fin-prod-stock{font-size:12px;color:var(--c-muted);font-family:var(--font-mono);}
+.fin-prod-inputs{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.fin-prod-label{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--c-muted);font-family:var(--font-mono);}
+.fin-input{width:100%;background:var(--c-surface2);border:1px solid var(--c-border2);border-radius:8px;padding:9px 10px;font-size:18px;font-weight:700;font-family:var(--font-mono);color:var(--c-text);text-align:center;box-sizing:border-box;}
+.fin-input:focus{outline:none;border-color:var(--c-accent);}
+.fin-empty{text-align:center;padding:32px 16px;color:var(--c-muted);font-size:14px;}
+.fin-actions{padding:12px 16px 28px;flex-shrink:0;}
+.fin-next-btn{width:100%;padding:16px;background:var(--c-accent);border:none;border-radius:14px;font-family:var(--font-head);font-size:15px;font-weight:700;letter-spacing:.06em;color:#000;cursor:pointer;}
+.fin-next-btn:active{filter:brightness(.9);}
+
 /* ── EVENT CLOSED BANNER ── */
 .event-closed-banner{display:none;background:rgba(224,82,82,.12);border-bottom:1px solid rgba(224,82,82,.3);color:var(--c-red);font-size:12px;font-weight:700;font-family:var(--font-mono);text-align:center;padding:8px 16px;letter-spacing:.05em;}
 
@@ -383,7 +416,7 @@ html,body{height:100%;background:var(--c-bg);color:var(--c-text);font-family:var
 @media print {
   body{background:#fff !important;color:#000 !important;}
   .login-screen,.navbar,.topbar,.bar-selector,.day-selector,.toast,
-  .export-row,.print-hide,.inv-overlay,.cfg-overlay,.pin-overlay,
+  .export-row,.print-hide,.fin-event-bar,.inv-overlay,.fin-overlay,.cfg-overlay,.pin-overlay,
   .overlay,.user-modal-overlay,.csv-import-overlay,.event-closed-banner{display:none !important;}
   #app{display:block !important;height:auto !important;overflow:visible !important;}
   .screen{display:block !important;overflow:visible !important;height:auto !important;}

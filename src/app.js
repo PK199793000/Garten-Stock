@@ -320,10 +320,11 @@ function umRoleChange() {
 }
 
 const TYPE_DEFAULTS = {
-  directeur:  ['reassort','casse','staff','offert','retour','entame'],
-  chef_bar:   ['reassort','casse','staff','offert','retour','entame'],
-  magasinier: ['reassort','casse','retour','entame'],
+  directeur:  ['reassort','casse','staff','offert'],
+  chef_bar:   ['reassort','casse','staff','offert'],
+  magasinier: ['reassort','casse'],
 };
+// retour et entame sont réservés au mode "Fin d'événement" — pas de bouton produit normal
 
 function addAllowedTypesField(role) {
   const existing = document.getElementById('um-types-field');
@@ -335,8 +336,8 @@ function addAllowedTypesField(role) {
   const wrap = document.createElement('div');
   wrap.className = 'um-bars-wrap';
   wrap.id = 'um-types-wrap';
-  const defaults = TYPE_DEFAULTS[role] || ['reassort','casse','staff','offert','retour','entame'];
-  const typeLabels = {reassort:'Sortie bar', casse:'Casse', staff:'Staff', offert:'Offert', retour:'Retour camion', entame:'Entamé perdu'};
+  const defaults = TYPE_DEFAULTS[role] || ['reassort','casse','staff','offert'];
+  const typeLabels = {reassort:'Sortie bar', casse:'Casse', staff:'Staff', offert:'Offert'};
   Object.keys(typeLabels).forEach(t => {
     const chip = document.createElement('div');
     chip.className = 'um-bar-chip' + (defaults.includes(t) ? ' selected' : '');
@@ -431,14 +432,14 @@ let BARS = [
 ];
 
 let ALL_PRODUCTS = [
-  {id:'fut_blonde', name:'Fût Blonde 30L',      icon:'🍺', pack:1,  liters:30, bars:['b1','b2','b3','b4','b5'], types:['reassort','casse','staff','offert','retour','entame'], alertSeuil:1},
-  {id:'fut_brune',  name:'Fût Brune 30L',       icon:'🍺', pack:1,  liters:30, bars:['b1','b2','b3','b4'],     types:['reassort','casse','staff','offert','retour','entame'], alertSeuil:1},
-  {id:'biere_btle', name:'Bière bouteille 33cl', icon:'🍾', pack:24, bars:['b1','b2','b3','b4'],               types:['reassort','casse','staff','offert','retour','entame'], alertSeuil:2},
+  {id:'fut_blonde', name:'Fût Blonde 30L',      icon:'🍺', pack:1,  liters:30, bars:['b1','b2','b3','b4','b5'], types:['reassort','casse','staff','offert'], alertSeuil:1},
+  {id:'fut_brune',  name:'Fût Brune 30L',       icon:'🍺', pack:1,  liters:30, bars:['b1','b2','b3','b4'],     types:['reassort','casse','staff','offert'], alertSeuil:1},
+  {id:'biere_btle', name:'Bière bouteille 33cl', icon:'🍾', pack:24, bars:['b1','b2','b3','b4'],               types:['reassort','casse','staff','offert'], alertSeuil:2},
   {id:'eau_50',     name:'Eau 50cl',             icon:'💧', pack:24, bars:['b1','b2','b3','b4','b5'],          types:['reassort','casse','staff'],           alertSeuil:2},
   {id:'soda_33',    name:'Soda 33cl',            icon:'🥤', pack:24, bars:['b1','b2','b3','b4','b5'],          types:['reassort','casse','staff'],           alertSeuil:2},
-  {id:'vin_bib',    name:'Vin rouge BIB 10L',    icon:'🍷', pack:1,  liters:10, bars:['b1','b2','b3','b4','b5'], types:['reassort','casse','staff','offert','retour','entame'], alertSeuil:1},
+  {id:'vin_bib',    name:'Vin rouge BIB 10L',    icon:'🍷', pack:1,  liters:10, bars:['b1','b2','b3','b4','b5'], types:['reassort','casse','staff','offert'], alertSeuil:1},
   {id:'champ_6',    name:'Champagne 75cl',       icon:'🥂', pack:6,  bars:['b5'],                             types:['reassort','casse','offert'],          alertSeuil:2},
-  {id:'spirit',     name:'Spiritueux 70cl',      icon:'🥃', pack:1,  bars:['b5'],                             types:['reassort','casse','staff','offert','retour','entame'],  alertSeuil:2},
+  {id:'spirit',     name:'Spiritueux 70cl',      icon:'🥃', pack:1,  bars:['b5'],                             types:['reassort','casse','staff','offert'],  alertSeuil:2},
 ];
 
 let STOCKS = {
@@ -694,10 +695,10 @@ function buildProducts() {
     else if (pct > .6) sc = '#e87a3a';
     const unitStr = p.pack > 1 ? 'pack ×'+p.pack : (p.liters ? p.liters+'L / unité' : 'unité');
     const ps = JSON.stringify(p).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-    const userAllowed = CURRENT_USER?.allowedTypes || ['reassort','casse','staff','offert','retour','entame'];
-    const ptypes = (p.types || ['reassort','casse','staff','offert','retour','entame']).filter(t => userAllowed.includes(t));
+    const userAllowed = CURRENT_USER?.allowedTypes || ['reassort','casse','staff','offert'];
+    const ptypes = (p.types || ['reassort','casse','staff','offert']).filter(t => userAllowed.includes(t));
     const TYPE_LABELS = TYPE_DISPLAY;
-    const canQuickAdd = ['reassort','staff','retour'];
+    const canQuickAdd = ['reassort','staff'];
     const actionBtns = ptypes.map(t => {
       const lp = canQuickAdd.includes(t)
         ? `onmousedown='startLongPress(${ps},"${t}")' onmouseup='cancelLongPress()' onmouseleave='cancelLongPress()' ontouchstart='startLongPress(${ps},"${t}");event.preventDefault();' ontouchend='cancelLongPress();'`
@@ -748,8 +749,8 @@ function openModal(p, type) {
   document.getElementById('m-name').textContent = p.name;
   document.getElementById('m-sub').textContent  = (BARS.find(b=>b.id===currentBar)||{name:''}).name + ' · ' + (p.pack > 1 ? 'pack ×'+p.pack : (p.liters ? p.liters+'L' : 'unité'));
   updateModalQty();
-  const userAllowed = CURRENT_USER?.allowedTypes || ['reassort','casse','staff','offert','retour','entame'];
-  const availTypes = (p.types || ['reassort','casse','staff','offert','retour','entame']).filter(t => userAllowed.includes(t));
+  const userAllowed = CURRENT_USER?.allowedTypes || ['reassort','casse','staff','offert'];
+  const availTypes = (p.types || ['reassort','casse','staff','offert']).filter(t => userAllowed.includes(t));
   buildTypeGrid(availTypes);
   if (!availTypes.includes(mType)) mType = availTypes[0] || type;
   updateTypeUI();
@@ -808,7 +809,7 @@ function toggleUnitMode() {
 function updateUnitModeToggle() {
   const wrap = document.getElementById('unit-mode-wrap');
   if (!wrap) return;
-  const canUnit = mProduct && mProduct.pack > 1 && ['casse','offert','staff','retour','entame'].includes(mType);
+  const canUnit = mProduct && mProduct.pack > 1 && ['casse','offert','staff','entame'].includes(mType);
   wrap.style.display = canUnit ? 'flex' : 'none';
   if (!canUnit && mUnitMode) {
     mUnitMode = false;
@@ -855,8 +856,8 @@ function setRecipientField(show) {
 }
 
 function updateTypeUI() {
-  const userAllowed = CURRENT_USER?.allowedTypes || ['reassort','casse','staff','offert','retour','entame'];
-  const types = mProduct ? (mProduct.types || ['reassort','casse','staff','offert','retour','entame']).filter(t => userAllowed.includes(t)) : [];
+  const userAllowed = CURRENT_USER?.allowedTypes || ['reassort','casse','staff','offert'];
+  const types = mProduct ? (mProduct.types || ['reassort','casse','staff','offert']).filter(t => userAllowed.includes(t)) : [];
   types.forEach(t => {
     const el = document.getElementById('to-'+t);
     if (el) el.className = 'type-opt'+(t===mType?' sel-'+t:'');
@@ -1289,7 +1290,7 @@ let cfgBars = [], cfgProds = [];
 
 function openConfig() {
   cfgBars  = BARS.map(b => ({...b}));
-  cfgProds = ALL_PRODUCTS.map(p => ({...p, bars:[...p.bars], types:[...(p.types||['reassort','casse','staff','offert','retour','entame'])]}));
+  cfgProds = ALL_PRODUCTS.map(p => ({...p, bars:[...p.bars], types:[...(p.types||['reassort','casse','staff','offert'])]}));
   document.getElementById('cfg-event').value = document.getElementById('event-name').textContent;
   renderCfgDays();
   renderCfgBars();
@@ -1374,8 +1375,8 @@ function renderCfgProds() {
     typesWrap.innerHTML = '<div class="cfg-types-lbl">Types de sortie disponibles :</div>';
     const typesRow = document.createElement('div');
     typesRow.className = 'cfg-types-checks';
-    const allT = ['reassort','casse','staff','offert','retour','entame'];
-    const typeLabels = {reassort:'SORTIE BAR',casse:'CASSE',staff:'STAFF',offert:'OFFERT',retour:'RETOUR',entame:'ENTAMÉ'};
+    const allT = ['reassort','casse','staff','offert'];
+    const typeLabels = {reassort:'SORTIE BAR',casse:'CASSE',staff:'STAFF',offert:'OFFERT'};
     const enabledTypes = p.types || allT;
     allT.forEach(t => {
       const on  = enabledTypes.includes(t);
@@ -1601,7 +1602,7 @@ function deleteBar(barId) {
 
 function addProduct() {
   const icon = PRODUCT_ICONS[cfgProds.length % PRODUCT_ICONS.length];
-  cfgProds.push({id: uid(), name:'Nouveau produit', icon, pack:1, bars:[], types:['reassort','casse','staff','offert','retour','entame'], alertSeuil:2});
+  cfgProds.push({id: uid(), name:'Nouveau produit', icon, pack:1, bars:[], types:['reassort','casse','staff','offert'], alertSeuil:2});
   renderCfgProds();
   setTimeout(() => { document.getElementById('cfg-overlay').scrollTop = 99999; }, 50);
 }
@@ -1619,7 +1620,7 @@ function saveConfig() {
   const evName = document.getElementById('cfg-event').value.trim();
   if (evName) document.getElementById('event-name').textContent = evName;
   BARS = cfgBars.map(b => ({...b}));
-  ALL_PRODUCTS = cfgProds.map(p => ({...p, bars:[...p.bars], types:[...(p.types||['reassort','casse','staff','offert','retour','entame'])]}));
+  ALL_PRODUCTS = cfgProds.map(p => ({...p, bars:[...p.bars], types:[...(p.types||['reassort','casse','staff','offert'])]}));
   BARS.forEach(b => { if (!STOCKS[b.id]) STOCKS[b.id] = {}; });
   if (!BARS.find(b => b.id === currentBar)) currentBar = BARS[0]?.id;
   saveAll();
@@ -1788,6 +1789,213 @@ function showHistoryDetail(evName, data) {
       </div>`;
     el.appendChild(sec);
   });
+}
+
+// ════════════════════════════════
+//  FIN D'ÉVÉNEMENT (wizard 2 étapes)
+// ════════════════════════════════
+
+// Données temporaires du wizard
+let _finData = {}; // { productId: { retour: qty, entame: qty, entameUnits: qty } }
+let _finCurrentStep = 1;
+
+function openFinEvent() {
+  if (eventClosed) { showToast('Événement déjà clôturé'); return; }
+  _finData = {};
+  _finCurrentStep = 1;
+
+  // Nom du bar
+  const bar = BARS.find(b => b.id === currentBar);
+  document.getElementById('fin-bar-name').textContent = bar ? bar.name : '';
+
+  // Étape 1 : construire la liste des produits pour retours & entamés
+  _buildFinStep1();
+
+  document.getElementById('fin-step1').style.display = '';
+  document.getElementById('fin-step2').style.display = 'none';
+  document.getElementById('fin-step-badge').textContent = '1 / 2';
+  document.getElementById('fin-back-btn').textContent = '← Annuler';
+
+  document.getElementById('fin-overlay').classList.add('open');
+}
+
+function _buildFinStep1() {
+  const list = document.getElementById('fin-products-list');
+  list.innerHTML = '';
+
+  const barProds = ALL_PRODUCTS.filter(p => p.bars.includes(currentBar));
+
+  barProds.forEach(p => {
+    const remaining = calcStock(currentBar, p.id);
+    if (remaining <= 0) return; // rien à retourner ni à déclarer
+    const displayQty = Number.isInteger(remaining) ? remaining : remaining.toFixed(1);
+    const unitStr = p.pack > 1 ? `pack ×${p.pack}` : (p.liters ? `${p.liters}L` : 'unité');
+
+    const row = document.createElement('div');
+    row.className = 'fin-prod-row';
+    row.innerHTML = `
+      <div class="fin-prod-head">
+        <span class="fin-prod-icon">${p.icon}</span>
+        <span class="fin-prod-name">${p.name}</span>
+        <span class="fin-prod-stock">Stock restant : <strong>${displayQty}</strong> ${unitStr}</span>
+      </div>
+      <div class="fin-prod-inputs">
+        <label class="fin-prod-label">
+          <span>↩ Retour camion (packs entiers)</span>
+          <input type="number" min="0" step="1" value="0" class="fin-input" id="fin-retour-${p.id}" placeholder="0">
+        </label>
+        ${p.pack > 1 ? `
+        <label class="fin-prod-label">
+          <span>⚠ Entamé perdu (unités)</span>
+          <input type="number" min="0" step="1" value="0" class="fin-input" id="fin-entame-${p.id}" placeholder="0">
+        </label>` : `
+        <label class="fin-prod-label">
+          <span>⚠ Entamé perdu (unités)</span>
+          <input type="number" min="0" step="1" value="0" class="fin-input" id="fin-entame-${p.id}" placeholder="0">
+        </label>`}
+      </div>`;
+    list.appendChild(row);
+  });
+
+  if (list.children.length === 0) {
+    list.innerHTML = '<div class="fin-empty">Aucun stock restant à déclarer.</div>';
+  }
+}
+
+function finBack() {
+  if (_finCurrentStep === 1) {
+    // Fermer le wizard
+    document.getElementById('fin-overlay').classList.remove('open');
+  } else {
+    // Retour à l'étape 1
+    _finCurrentStep = 1;
+    document.getElementById('fin-step1').style.display = '';
+    document.getElementById('fin-step2').style.display = 'none';
+    document.getElementById('fin-step-badge').textContent = '1 / 2';
+    document.getElementById('fin-back-btn').textContent = '← Annuler';
+  }
+}
+
+function confirmFinStep1() {
+  // Lire les valeurs des inputs et les stocker dans _finData
+  const barProds = ALL_PRODUCTS.filter(p => p.bars.includes(currentBar));
+  const now = Date.now();
+
+  barProds.forEach(p => {
+    const retourEl = document.getElementById(`fin-retour-${p.id}`);
+    const entameEl = document.getElementById(`fin-entame-${p.id}`);
+    if (!retourEl && !entameEl) return;
+
+    const retourQty = parseInt(retourEl?.value || '0', 10) || 0;
+    const entameQty = parseInt(entameEl?.value || '0', 10) || 0;
+
+    if (retourQty > 0) {
+      log.unshift({
+        id: `fin-retour-${p.id}-${now}`,
+        barId: currentBar,
+        productId: p.id,
+        type: 'retour',
+        qty: retourQty,
+        unitMode: false,
+        pack: p.pack || 1,
+        ts: now,
+        userId: CURRENT_USER?.id || '',
+        userName: CURRENT_USER?.name || '',
+        day: currentDay,
+        finEvent: true,
+      });
+    }
+    if (entameQty > 0) {
+      log.unshift({
+        id: `fin-entame-${p.id}-${now+1}`,
+        barId: currentBar,
+        productId: p.id,
+        type: 'entame',
+        qty: p.pack > 1 ? entameQty : entameQty,
+        unitMode: p.pack > 1,
+        pack: p.pack || 1,
+        ts: now + 1,
+        userId: CURRENT_USER?.id || '',
+        userName: CURRENT_USER?.name || '',
+        day: currentDay,
+        finEvent: true,
+      });
+    }
+  });
+
+  saveAll();
+
+  // Passer à l'étape 2 : inventaire physique
+  _buildFinStep2();
+  _finCurrentStep = 2;
+  document.getElementById('fin-step1').style.display = 'none';
+  document.getElementById('fin-step2').style.display = '';
+  document.getElementById('fin-step-badge').textContent = '2 / 2';
+  document.getElementById('fin-back-btn').textContent = '← Retour';
+}
+
+function _buildFinStep2() {
+  const list = document.getElementById('fin-inv-list');
+  list.innerHTML = '';
+
+  const barProds = ALL_PRODUCTS.filter(p => p.bars.includes(currentBar));
+
+  barProds.forEach(p => {
+    const remaining = calcStock(currentBar, p.id);
+    const displayQty = Number.isInteger(remaining) ? remaining : remaining.toFixed(1);
+    const unitStr = p.pack > 1 ? `pack ×${p.pack}` : (p.liters ? `${p.liters}L` : 'unité');
+
+    const row = document.createElement('div');
+    row.className = 'fin-inv-row';
+    row.innerHTML = `
+      <div class="fin-prod-head">
+        <span class="fin-prod-icon">${p.icon}</span>
+        <span class="fin-prod-name">${p.name}</span>
+        <span class="fin-prod-stock">Théorique : <strong>${displayQty}</strong> ${unitStr}</span>
+      </div>
+      <label class="fin-prod-label">
+        <span>Inventaire physique (${unitStr})</span>
+        <input type="number" min="0" step="${p.pack > 1 ? '1' : '0.5'}" value="${remaining >= 0 ? (Number.isInteger(remaining) ? remaining : remaining.toFixed(1)) : 0}" class="fin-input" id="fin-inv-${p.id}">
+      </label>`;
+    list.appendChild(row);
+  });
+}
+
+async function confirmFinStep2() {
+  // Sauvegarder l'inventaire physique
+  const barProds = ALL_PRODUCTS.filter(p => p.bars.includes(currentBar));
+  const snap = {
+    id: `fin-inv-${currentBar}-${Date.now()}`,
+    barId: currentBar,
+    ts: Date.now(),
+    userId: CURRENT_USER?.id || '',
+    userName: CURRENT_USER?.name || '',
+    day: currentDay,
+    finEvent: true,
+    counts: {}
+  };
+
+  barProds.forEach(p => {
+    const el = document.getElementById(`fin-inv-${p.id}`);
+    if (el) snap.counts[p.id] = parseFloat(el.value) || 0;
+  });
+
+  inventaires.push(snap);
+  saveAll();
+
+  // Clore l'événement pour ce bar (côté UI)
+  document.getElementById('fin-overlay').classList.remove('open');
+  showToast('✅ Clôture enregistrée — Session terminée');
+
+  // Déconnexion automatique après 1,5 secondes
+  setTimeout(() => {
+    clearSession();
+    CURRENT_USER = null;
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('login-pw').value = '';
+    document.getElementById('login-id').value = '';
+  }, 1500);
 }
 
 // ════════════════════════════════

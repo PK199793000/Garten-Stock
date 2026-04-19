@@ -96,6 +96,9 @@
       <span class="section-action" onclick="requestConfig()">⚙ Configurer</span>
     </div>
     <div class="product-list" id="product-list"></div>
+    <div class="fin-event-bar" id="fin-event-bar">
+      <button class="fin-event-btn" onclick="openFinEvent()">🏁 Fin d'événement</button>
+    </div>
   </div>
 
   <div class="screen" id="screen-log">
@@ -245,6 +248,43 @@
     </div>
 
     <button class="cfg-close-btn" onclick="saveConfig()">✓ Enregistrer et fermer</button>
+  </div>
+</div>
+
+<!-- FIN D'ÉVÉNEMENT (wizard 2 étapes) -->
+<div class="fin-overlay" id="fin-overlay">
+  <div class="fin-panel">
+
+    <div class="fin-topbar">
+      <span class="fin-back" id="fin-back-btn" onclick="finBack()">← Annuler</span>
+      <span class="fin-main-title">🏁 Clôture · <span id="fin-bar-name"></span></span>
+      <span class="fin-step-badge" id="fin-step-badge">1 / 2</span>
+    </div>
+
+    <!-- ÉTAPE 1 : Retours & Entamés -->
+    <div id="fin-step1">
+      <div class="fin-intro">
+        <div class="fin-intro-title">Retours &amp; Pertes</div>
+        <div class="fin-intro-sub">Renseignez ce qui repart au camion et ce qui est perdu (packs entamés). Laissez vide si rien.</div>
+      </div>
+      <div id="fin-products-list"></div>
+      <div class="fin-actions">
+        <button class="fin-next-btn" onclick="confirmFinStep1()">Suivant — Inventaire →</button>
+      </div>
+    </div>
+
+    <!-- ÉTAPE 2 : Inventaire physique -->
+    <div id="fin-step2" style="display:none">
+      <div class="fin-intro">
+        <div class="fin-intro-title">Inventaire physique</div>
+        <div class="fin-intro-sub">Comptez ce qui reste physiquement dans le bar et saisissez les quantités.</div>
+      </div>
+      <div id="fin-inv-list"></div>
+      <div class="fin-actions">
+        <button class="fin-next-btn" onclick="confirmFinStep2()">✓ Enregistrer &amp; Fermer ma session</button>
+      </div>
+    </div>
+
   </div>
 </div>
 
