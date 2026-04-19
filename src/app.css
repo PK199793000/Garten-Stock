@@ -359,6 +359,34 @@ html,body{height:100%;background:var(--c-bg);color:var(--c-text);font-family:var
 .inv-delta.surplus{color:var(--c-accent);}
 .inv-delta.deficit{color:var(--c-red);}
 
+/* ── RÉCONCILIATION CAISSE ── */
+.recon-section{margin:16px 0 4px;background:var(--c-surface);border:1px solid var(--c-border2);border-radius:14px;overflow:hidden;}
+.recon-title{font-family:var(--font-head);font-size:13px;font-weight:700;letter-spacing:.07em;padding:12px 14px 4px;color:var(--c-accent);}
+.recon-legend{font-size:11px;color:var(--c-muted);padding:0 14px 10px;line-height:1.5;}
+.recon-legend strong{color:var(--c-text);}
+.recon-table-wrap{overflow-x:auto;}
+.recon-table{width:100%;border-collapse:collapse;font-size:12px;}
+.recon-table th{background:var(--c-surface2);font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--c-muted);padding:8px 10px;text-align:left;white-space:nowrap;border-bottom:1px solid var(--c-border2);}
+.recon-table td{padding:9px 10px;border-bottom:1px solid var(--c-border);vertical-align:middle;white-space:nowrap;}
+.recon-table tbody tr:last-child td{border-bottom:none;}
+.recon-num{font-family:var(--font-mono);font-size:11px;text-align:right;}
+.recon-loss{color:var(--c-red);}
+.recon-theo{color:var(--c-muted);}
+.recon-pos{color:#e87a3a;font-weight:700;}  /* sold more than stock shows */
+.recon-neg{color:#52c47a;font-weight:700;}  /* sold less (leftover / over-poured) */
+.recon-zero{color:var(--c-muted);}
+.recon-ventes-input{width:72px;background:var(--c-surface2);border:1px solid var(--c-accent);border-radius:7px;padding:5px 8px;font-size:14px;font-weight:700;font-family:var(--font-mono);color:var(--c-accent);text-align:center;}
+.recon-ventes-input:focus{outline:none;border-color:var(--c-accent);box-shadow:0 0 0 2px rgba(232,197,71,.2);}
+.recon-input-cell{text-align:center !important;}
+.recon-footer{font-size:10px;color:var(--c-muted);padding:8px 14px;font-family:var(--font-mono);border-top:1px solid var(--c-border2);line-height:1.6;}
+
+/* ── CFG CONVERSION (unitCl / portionCl) ── */
+.cfg-conv-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;}
+.cfg-conv-lbl{font-size:11px;font-weight:700;color:var(--c-accent);font-family:var(--font-mono);white-space:nowrap;}
+.cfg-conv-field{display:flex;flex-direction:column;gap:3px;font-size:10px;color:var(--c-muted);font-family:var(--font-mono);}
+.cfg-conv-inp{width:90px;background:var(--c-surface2);border:1px solid var(--c-border2);border-radius:8px;padding:6px 8px;font-size:13px;font-family:var(--font-mono);color:var(--c-text);text-align:center;}
+.cfg-conv-inp:focus{outline:none;border-color:var(--c-accent);}
+
 /* ── EXPORT ROW ── */
 .export-row{display:flex;gap:8px;padding:0 16px 80px;margin-top:8px;}
 .export-btn{flex:1;padding:14px;background:var(--c-surface);border:1px solid var(--c-border2);border-radius:12px;font-family:var(--font-head);font-size:13px;font-weight:700;cursor:pointer;color:var(--c-text);letter-spacing:.02em;}
@@ -416,7 +444,7 @@ html,body{height:100%;background:var(--c-bg);color:var(--c-text);font-family:var
 @media print {
   body{background:#fff !important;color:#000 !important;}
   .login-screen,.navbar,.topbar,.bar-selector,.day-selector,.toast,
-  .export-row,.print-hide,.fin-event-bar,.inv-overlay,.fin-overlay,.cfg-overlay,.pin-overlay,
+  .export-row,.print-hide,.fin-event-bar,.inv-overlay,.fin-overlay,.cfg-overlay,.pin-overlay,.recon-section,
   .overlay,.user-modal-overlay,.csv-import-overlay,.event-closed-banner{display:none !important;}
   #app{display:block !important;height:auto !important;overflow:visible !important;}
   .screen{display:block !important;overflow:visible !important;height:auto !important;}
