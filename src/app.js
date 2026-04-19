@@ -330,7 +330,9 @@ let DAY_STOCKS = { j1: {} }; // stocks de départ par jour, copié depuis STOCKS
 
 let currentBar  = BARS[0].id;
 let mQty = 1, mType = 'reassort', mProduct = null, mUnitMode = false;
+let _lpTimer = null, _lpFired = false;
 let log = [];
+let inventaires = [];
 let idCounter = 100;
 
 // PIN haché (SHA-256) — initialisé au démarrage
@@ -372,7 +374,8 @@ window._fbApply = function(data) {
   if (data.days)     { days = data.days;             changed = true; }
   if (data.DAY_STOCKS){ DAY_STOCKS = data.DAY_STOCKS; changed = true; }
   if (data.currentDay){ currentDay = data.currentDay; changed = true; }
-  if (data.pinHash)  { CONFIG_PIN_HASH = data.pinHash; CONFIG_PIN_LEN = data.pinLen || 3; }
+  if (data.pinHash)    { CONFIG_PIN_HASH = data.pinHash; CONFIG_PIN_LEN = data.pinLen || 3; }
+  if (data.inventaires){ inventaires = data.inventaires; }
   if (data.eventName) {
     const el = document.getElementById('event-name');
     if (el) el.textContent = data.eventName;
@@ -393,6 +396,7 @@ function saveAll() {
     days, DAY_STOCKS, currentDay,
     pinHash: CONFIG_PIN_HASH,
     pinLen:  CONFIG_PIN_LEN,
+    inventaires,
     eventName: document.getElementById('event-name').textContent,
     updatedAt: new Date().toISOString(),
   };
@@ -555,9 +559,13 @@ function buildProducts() {
     const userAllowed = CURRENT_USER?.allowedTypes || ['reassort','casse','staff','offert'];
     const ptypes = (p.types || ['reassort','casse','staff','offert']).filter(t => userAllowed.includes(t));
     const TYPE_LABELS = {reassort:'REASSORT', casse:'CASSE', staff:'STAFF', offert:'OFFERT'};
-    const actionBtns = ptypes.map(t =>
-      `<button class="pact-btn ${t}" onclick='openModal(${ps},"${t}")'>${TYPE_LABELS[t]||t.toUpperCase()}</button>`
-    ).join('');
+    const canQuickAdd = ['reassort','staff'];
+    const actionBtns = ptypes.map(t => {
+      const lp = canQuickAdd.includes(t)
+        ? `onmousedown='startLongPress(${ps},"${t}")' onmouseup='cancelLongPress()' onmouseleave='cancelLongPress()' ontouchstart='startLongPress(${ps},"${t}");event.preventDefault();' ontouchend='cancelLongPress();'`
+        : '';
+      return `<button class="pact-btn ${t}${canQuickAdd.includes(t)?' pact-lp':''}" onclick='handlePactBtn(${ps},"${t}")' ${lp}>${TYPE_LABELS[t]||t.toUpperCase()}<span class="pact-lp-hint">⚡+1</span></button>`;
+    }).join('');
     const alertBadge = isAlert ? '<span class="stock-alert-badge">⚠ BAS</span>' : '';
     const div = document.createElement('div');
     div.className = 'pcard' + (isAlert ? ' pcard--alert' : '');
@@ -593,8 +601,11 @@ function openModal(p, type) {
   if (!availTypes.includes(mType)) mType = availTypes[0] || type;
   updateTypeUI();
   updateUnitModeToggle();
-  toggleReasonField(mType === 'offert');
+  const needsReason = ['offert','casse'].includes(mType);
+  setReasonField(needsReason, mType);
+  setRecipientField(mType === 'offert');
   document.getElementById('m-reason').value = '';
+  const rec = document.getElementById('m-recipient'); if(rec) rec.value = '';
   document.getElementById('overlay').classList.add('open');
 }
 
@@ -653,20 +664,40 @@ function updateUnitModeToggle() {
   }
 }
 
+const REASON_LABELS = {
+  offert: {label: "Motif de l'offert", placeholder: "Ex : artiste invité, geste commercial…"},
+  casse:  {label: "Motif de la casse",  placeholder: "Ex : bouteille tombée, fût percé…"},
+};
+
 function setType(t) {
   mType = t;
   mUnitMode = false;
   updateTypeUI();
   updateUnitModeToggle();
-  toggleReasonField(t === 'offert');
-  if (t !== 'offert') document.getElementById('m-reason').value = '';
+  const needsReason = ['offert','casse'].includes(t);
+  setReasonField(needsReason, t);
+  setRecipientField(t === 'offert');
+  if (!needsReason) document.getElementById('m-reason').value = '';
+  if (t !== 'offert') { const r = document.getElementById('m-recipient'); if(r) r.value=''; }
   const btn = document.getElementById('unit-mode-btn');
   if (btn) { btn.classList.remove('active'); btn.textContent = '🔢 Par unité'; }
   updateModalQty();
 }
 
-function toggleReasonField(show) {
+function setReasonField(show, type) {
   const el = document.getElementById('m-reason-field');
+  if (!el) return;
+  el.style.display = show ? 'block' : 'none';
+  if (show && REASON_LABELS[type]) {
+    const lbl = document.getElementById('m-reason-label-text');
+    if (lbl) lbl.textContent = REASON_LABELS[type].label;
+    const ta = document.getElementById('m-reason');
+    if (ta) ta.placeholder = REASON_LABELS[type].placeholder;
+  }
+}
+
+function setRecipientField(show) {
+  const el = document.getElementById('m-recipient-field');
   if (el) el.style.display = show ? 'block' : 'none';
 }
 
@@ -681,12 +712,20 @@ function updateTypeUI() {
 
 function confirmEntry() {
   if (!mProduct) return;
-  let reason = '';
-  if (mType === 'offert') {
+  let reason = '', recipient = '';
+  if (['offert','casse'].includes(mType)) {
     reason = (document.getElementById('m-reason').value || '').trim();
     if (!reason) {
       document.getElementById('m-reason').focus();
-      showToast('Un motif est requis pour un offert');
+      showToast(mType === 'offert' ? 'Un motif est requis pour un offert' : 'Un motif est requis pour une casse');
+      return;
+    }
+  }
+  if (mType === 'offert') {
+    recipient = (document.getElementById('m-recipient').value || '').trim();
+    if (!recipient) {
+      document.getElementById('m-recipient').focus();
+      showToast('Indiquer le bénéficiaire de l\'offert');
       return;
     }
   }
@@ -697,7 +736,7 @@ function confirmEntry() {
     barId: currentBar, barName: bar.name,
     productId: mProduct.id, productName: mProduct.name, pack: mProduct.pack,
     qty: mQty, units, type: mType, unitMode: mUnitMode,
-    reason,
+    reason, recipient,
     userId:      CURRENT_USER ? CURRENT_USER.id : 'inconnu',
     userDisplay: CURRENT_USER ? (CURRENT_USER.displayName||CURRENT_USER.id) : 'inconnu',
     userRole:    CURRENT_USER ? CURRENT_USER.role : '',
@@ -711,6 +750,44 @@ function confirmEntry() {
 
 function overlayClick(e) { if(e.target === document.getElementById('overlay')) closeOverlay(); }
 function closeOverlay()   { document.getElementById('overlay').classList.remove('open'); }
+
+// ════════════════════════════════
+//  LONG PRESS QUICK ADD (+1 pack)
+// ════════════════════════════════
+function startLongPress(p, type) {
+  _lpFired = false;
+  _lpTimer = setTimeout(() => {
+    _lpFired = true;
+    _lpTimer = null;
+    quickAdd(p, type);
+  }, 600);
+}
+
+function cancelLongPress() {
+  if (_lpTimer) { clearTimeout(_lpTimer); _lpTimer = null; }
+}
+
+function handlePactBtn(p, type) {
+  if (_lpFired) { _lpFired = false; return; }
+  openModal(p, type);
+}
+
+function quickAdd(p, type) {
+  const bar = BARS.find(b => b.id === currentBar);
+  log.unshift({
+    id: Date.now(), time: now(), day: currentDay,
+    barId: currentBar, barName: bar.name,
+    productId: p.id, productName: p.name, pack: p.pack,
+    qty: 1, units: p.pack || 1, type, unitMode: false,
+    reason: '', recipient: '',
+    userId:      CURRENT_USER ? CURRENT_USER.id : 'inconnu',
+    userDisplay: CURRENT_USER ? (CURRENT_USER.displayName||CURRENT_USER.id) : 'inconnu',
+    userRole:    CURRENT_USER ? CURRENT_USER.role : '',
+  });
+  saveAll();
+  buildProducts();
+  showToast('⚡ +1 ' + p.name + ' · ' + type);
+}
 
 // ════════════════════════════════
 //  LOG
@@ -735,7 +812,7 @@ function buildLog() {
       <span class="log-type-pill pill-${e.type}">${e.type.toUpperCase()}</span>
       ${e.userDisplay ? `<span style="font-size:10px;color:var(--c-muted);font-family:var(--font-mono);flex-shrink:0;">${e.userDisplay}</span>` : ''}
       ${canDelete ? `<button class="log-delete" onclick="deleteLogEntry(${e.id})" title="Annuler cette saisie">✕</button>` : ''}
-      ${e.reason ? `<div class="log-reason">💬 ${e.reason}</div>` : ''}`;
+      ${e.reason ? `<div class="log-reason">💬 ${e.reason}${e.recipient ? ` · <strong>${e.recipient}</strong>` : ''}</div>` : ''}`;
     el.appendChild(div);
   });
 }
@@ -1193,6 +1270,104 @@ function renderStockGrid(pid) {
     });
     grid.appendChild(cell);
   });
+}
+
+// ════════════════════════════════
+//  MODE INVENTAIRE
+// ════════════════════════════════
+function openInventaire() {
+  const bar = BARS.find(b => b.id === currentBar);
+  document.getElementById('inv-bar-name').textContent = bar ? bar.name : '';
+  document.getElementById('inv-meta').textContent = currentDay.toUpperCase() + ' · ' + new Date().toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'});
+  buildInventaire();
+  document.getElementById('inv-overlay').classList.add('open');
+}
+
+function closeInventaire() {
+  document.getElementById('inv-overlay').classList.remove('open');
+}
+
+function buildInventaire() {
+  const el = document.getElementById('inv-content');
+  el.innerHTML = '';
+  const products = getBarProducts(currentBar);
+  if (!products.length) { el.innerHTML = '<div style="padding:24px;color:var(--c-muted);text-align:center;">Aucun produit sur ce bar</div>'; return; }
+
+  // Afficher dernier inventaire si existant
+  const lastInv = [...inventaires].reverse().find(i => i.barId === currentBar && i.day === currentDay);
+  if (lastInv) {
+    const meta = document.createElement('div');
+    meta.className = 'inv-last';
+    meta.textContent = 'Dernier inventaire : ' + new Date(lastInv.timestamp).toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'}) + ' par ' + lastInv.userDisplay;
+    el.appendChild(meta);
+  }
+
+  products.forEach(p => {
+    const calc = calcStock(currentBar, p.id);
+    const displayCalc = Number.isInteger(calc) ? calc : calc.toFixed(1);
+    const row = document.createElement('div');
+    row.className = 'inv-row';
+    row.dataset.pid = p.id;
+    const prevPhysical = lastInv ? (lastInv.items.find(i => i.productId === p.id)?.physical ?? '') : '';
+    row.innerHTML = `
+      <div class="inv-prod-name">${p.icon} ${p.name}</div>
+      <div class="inv-counts">
+        <div class="inv-calc">
+          <span class="inv-lbl">Calculé</span>
+          <span class="inv-val">${displayCalc}</span>
+        </div>
+        <div class="inv-physical">
+          <span class="inv-lbl">Physique</span>
+          <input class="inv-input" type="number" min="0" step="1" placeholder="—" value="${prevPhysical}" data-pid="${p.id}" data-calc="${calc}">
+        </div>
+        <div class="inv-delta-wrap">
+          <span class="inv-lbl">Écart</span>
+          <span class="inv-delta" id="invd-${p.id}">—</span>
+        </div>
+      </div>`;
+    row.querySelector('input').addEventListener('input', e => {
+      const physical = parseFloat(e.target.value);
+      const deltaEl = document.getElementById('invd-' + p.id);
+      if (isNaN(physical)) { deltaEl.textContent = '—'; deltaEl.className = 'inv-delta'; return; }
+      const delta = physical - parseFloat(e.target.dataset.calc);
+      const d = Math.round(delta * 10) / 10;
+      deltaEl.textContent = (d > 0 ? '+' : '') + d;
+      deltaEl.className = 'inv-delta ' + (d === 0 ? 'ok' : d > 0 ? 'surplus' : 'deficit');
+    });
+    el.appendChild(row);
+    // Déclencher le calcul si valeur précédente
+    if (prevPhysical !== '') row.querySelector('input').dispatchEvent(new Event('input'));
+  });
+}
+
+function saveInventaire() {
+  const products = getBarProducts(currentBar);
+  const items = [];
+  let hasAny = false;
+  products.forEach(p => {
+    const inp = document.querySelector(`.inv-input[data-pid="${p.id}"]`);
+    if (!inp || inp.value === '') return;
+    const physical = parseFloat(inp.value);
+    if (isNaN(physical)) return;
+    const calc = calcStock(currentBar, p.id);
+    items.push({productId: p.id, productName: p.name, calculated: Math.round(calc*10)/10, physical, delta: Math.round((physical-calc)*10)/10});
+    hasAny = true;
+  });
+  if (!hasAny) { showToast('Aucune valeur saisie'); return; }
+  const bar = BARS.find(b => b.id === currentBar);
+  inventaires.push({
+    id: Date.now(),
+    timestamp: new Date().toISOString(),
+    day: currentDay,
+    barId: currentBar,
+    barName: bar ? bar.name : '',
+    userId:      CURRENT_USER ? CURRENT_USER.id : '',
+    userDisplay: CURRENT_USER ? (CURRENT_USER.displayName||CURRENT_USER.id) : '',
+    items,
+  });
+  saveAll();
+  showToast('✓ Inventaire enregistré');
+  closeInventaire();
 }
 
 // ════════════════════════════════

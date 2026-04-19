@@ -91,6 +91,7 @@
   <div class="screen active" id="screen-sorties">
     <div class="section-head">
       <span class="section-title" id="bar-product-count">Produits</span>
+      <span class="section-action" id="inv-btn" onclick="openInventaire()" style="margin-right:6px;">📦 Inventaire</span>
       <span class="section-action" onclick="requestConfig()">⚙ Configurer</span>
     </div>
     <div class="product-list" id="product-list"></div>
@@ -140,8 +141,12 @@
     </div>
     <div class="type-grid" id="m-type-grid"></div>
     <div class="m-reason-field" id="m-reason-field">
-      <label class="m-reason-label">Motif de l'offert <span>*</span></label>
-      <textarea class="m-reason-input" id="m-reason" rows="2" placeholder="Ex : artiste invité, VIP table, geste commercial…"></textarea>
+      <label class="m-reason-label"><span id="m-reason-label-text">Motif</span> <span>*</span></label>
+      <textarea class="m-reason-input" id="m-reason" rows="2" placeholder=""></textarea>
+    </div>
+    <div class="m-reason-field" id="m-recipient-field" style="display:none;margin-top:6px;">
+      <label class="m-reason-label">Pour qui <span>*</span></label>
+      <input class="m-reason-input" id="m-recipient" type="text" placeholder="Artiste, table VIP, nom…" style="padding:6px 0;">
     </div>
     <button class="confirm-btn" onclick="confirmEntry()">Confirmer la sortie</button>
     <span class="cancel-link" onclick="closeOverlay()">Annuler</span>
@@ -235,6 +240,19 @@
     </div>
 
     <button class="cfg-close-btn" onclick="saveConfig()">✓ Enregistrer et fermer</button>
+  </div>
+</div>
+
+<!-- INVENTAIRE -->
+<div class="inv-overlay" id="inv-overlay">
+  <div class="inv-panel">
+    <div class="inv-topbar">
+      <span class="inv-back" onclick="closeInventaire()">← Retour</span>
+      <span class="inv-main-title">Inventaire · <span id="inv-bar-name"></span></span>
+      <span class="inv-save-btn" onclick="saveInventaire()">Enregistrer</span>
+    </div>
+    <div class="inv-meta" id="inv-meta"></div>
+    <div id="inv-content"></div>
   </div>
 </div>
 
