@@ -354,3 +354,43 @@ html,body{height:100%;background:var(--c-bg);color:var(--c-text);font-family:var
 .inv-delta.ok{color:var(--c-green);}
 .inv-delta.surplus{color:var(--c-accent);}
 .inv-delta.deficit{color:var(--c-red);}
+
+/* ── EXPORT ROW ── */
+.export-row{display:flex;gap:8px;padding:0 16px 80px;margin-top:8px;}
+.export-btn{flex:1;padding:14px;background:var(--c-surface);border:1px solid var(--c-border2);border-radius:12px;font-family:var(--font-head);font-size:13px;font-weight:700;cursor:pointer;color:var(--c-text);letter-spacing:.02em;}
+.export-btn-print{border-color:rgba(232,197,71,.3);color:var(--c-accent);}
+
+/* ── EVENT CLOSED BANNER ── */
+.event-closed-banner{display:none;background:rgba(224,82,82,.12);border-bottom:1px solid rgba(224,82,82,.3);color:var(--c-red);font-size:12px;font-weight:700;font-family:var(--font-mono);text-align:center;padding:8px 16px;letter-spacing:.05em;}
+
+/* ── OFFERTS / CASSES DETAIL IN RECAP ── */
+.offert-detail-wrap{margin:12px 0 4px;}
+.offert-detail-title{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--c-purple);margin-bottom:6px;font-family:var(--font-mono);}
+.offert-table td:nth-child(4),.offert-table td:nth-child(5){font-size:11px;color:var(--c-muted);max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+/* ── INVENTAIRE RECAP TABLE ── */
+.inv-ok{color:var(--c-green);font-weight:700;}
+.inv-surplus{color:var(--c-accent);font-weight:700;}
+.inv-deficit{color:var(--c-red);font-weight:700;}
+
+/* ════════════════════
+   IMPRESSION PDF
+   ════════════════════ */
+@media print {
+  body{background:#fff !important;color:#000 !important;}
+  .login-screen,.navbar,.topbar,.bar-selector,.day-selector,.toast,
+  .export-row,.print-hide,.inv-overlay,.cfg-overlay,.pin-overlay,
+  .overlay,.user-modal-overlay,.csv-import-overlay,.event-closed-banner{display:none !important;}
+  #app{display:block !important;height:auto !important;overflow:visible !important;}
+  .screen{display:block !important;overflow:visible !important;height:auto !important;}
+  .screen:not(#screen-recap){display:none !important;}
+  #screen-recap{padding-bottom:0 !important;}
+  .recap-bar-section{page-break-inside:avoid;border:1px solid #ddd;border-radius:8px;padding:12px;margin-bottom:16px;}
+  .recap-bar-title{font-size:16px;font-weight:700;margin-bottom:8px;}
+  .kpi-row{display:flex;gap:12px;margin-bottom:8px;}
+  .kpi{background:#f5f5f5 !important;border-radius:6px;padding:6px 10px;}
+  .kpi-val,.kpi-label{color:#000 !important;}
+  .rtable th,.rtable td{border-color:#ccc !important;color:#000 !important;}
+  .offert-table td{color:#000 !important;}
+  .global-table th,.global-table td{color:#000 !important;border-color:#ccc !important;}
+}

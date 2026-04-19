@@ -87,6 +87,7 @@
     </div>
   </div>
   <div class="bar-selector" id="bar-selector"></div>
+  <div class="event-closed-banner" id="event-closed-banner">🔒 Événement terminé — Mode lecture seule</div>
 
   <div class="screen active" id="screen-sorties">
     <div class="section-head">
@@ -107,7 +108,10 @@
 
   <div class="screen" id="screen-recap">
     <div id="recap-content"></div>
-    <button class="export-btn" onclick="exportCSV()">↓ Exporter CSV complet</button>
+    <div class="export-row">
+      <button class="export-btn" onclick="exportCSV()">↓ CSV complet</button>
+      <button class="export-btn export-btn-print" onclick="printRecap()">🖨 Imprimer PDF</button>
+    </div>
   </div>
 
   <div class="screen" id="screen-history">
@@ -236,6 +240,7 @@
 
     <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--c-border);">
       <div style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--c-muted);margin-bottom:10px;">Zone dangereuse</div>
+      <button id="cfg-close-event-btn" onclick="toggleEventClosed()" style="width:100%;padding:13px;background:transparent;border:1px solid rgba(224,82,82,.4);border-radius:10px;font-family:var(--font-head);font-size:13px;font-weight:700;cursor:pointer;color:var(--c-red);letter-spacing:.04em;margin-bottom:8px;">🔒 Clore l'événement</button>
       <button onclick="resetAllData()" style="width:100%;padding:13px;background:transparent;border:1px solid rgba(224,82,82,.4);border-radius:10px;font-family:var(--font-head);font-size:13px;font-weight:700;cursor:pointer;color:var(--c-red);letter-spacing:.04em;">⚠ Remettre à zéro les données</button>
     </div>
 

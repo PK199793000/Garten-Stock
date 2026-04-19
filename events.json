@@ -1,7 +1,7 @@
 [
-  { "id": "gartenstock_carl_cox",         "title": "Carl Cox",          "eventName": "Carl Cox · J1" },
-  { "id": "gartenstock_fontainebleau",    "title": "Fontainebleau",     "eventName": "Fontainebleau · J1" },
-  { "id": "gartenstock_gotb",             "title": "GOTB",              "eventName": "GOTB · J1" },
-  { "id": "gartenstock_ludovico_einaudi", "title": "Ludovico Einaudi",  "eventName": "Ludovico Einaudi · J1" },
-  { "id": "gartenstock_prix_de_diane",    "title": "Prix de Diane",     "eventName": "Prix de Diane · J1" }
+  { "id": "gartenstock_gotb",             "title": "GÖTB 2026",         "eventName": "Gärten on the Beach · 8-9 juin 2026" },
+  { "id": "gartenstock_carl_cox",         "title": "Carl Cox 2026",     "eventName": "Carl Cox · 20 juin 2026" },
+  { "id": "gartenstock_ludovico_einaudi", "title": "Ludovico Einaudi",  "eventName": "Ludovico Einaudi · 26-27 juin 2026" },
+  { "id": "gartenstock_prix_de_diane",    "title": "Prix de Diane",     "eventName": "Prix de Diane · 14 juin 2026" },
+  { "id": "gartenstock_event5",           "title": "Événement 5",       "eventName": "Événement 5 · 2026" }
 ]

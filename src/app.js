@@ -21,6 +21,37 @@ function showToast(msg) {
 function uid() { return 'x' + (++idCounter); }
 
 // ════════════════════════════════
+//  NOTIFICATIONS STOCK BAS
+// ════════════════════════════════
+async function requestNotificationPermission() {
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'default') {
+    await Notification.requestPermission();
+  }
+}
+
+function checkStockAlerts(products, barId) {
+  if (!CURRENT_USER || !['directeur','chef_bar'].includes(CURRENT_USER.role)) return;
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  const bar = BARS.find(b => b.id === barId);
+  products.forEach(p => {
+    const remaining = calcStock(barId, p.id);
+    const seuil = p.alertSeuil !== undefined ? p.alertSeuil : 2;
+    const key = barId + '-' + p.id;
+    if (remaining <= seuil && remaining >= 0 && !_notifiedAlerts.has(key)) {
+      _notifiedAlerts.add(key);
+      new Notification('⚠ Stock bas — ' + (bar ? bar.name : ''), {
+        body: p.name + ' : ' + (Number.isInteger(remaining) ? remaining : remaining.toFixed(1)) + ' restant(s)',
+        icon: 'logo.png',
+        tag: key,
+      });
+    } else if (remaining > seuil) {
+      _notifiedAlerts.delete(key);
+    }
+  });
+}
+
+// ════════════════════════════════
 //  THÈME CLAIR / SOMBRE
 // ════════════════════════════════
 function initTheme() {
@@ -89,6 +120,7 @@ async function doLogin() {
   errEl.textContent = '';
   document.getElementById('login-screen').classList.remove('active');
   document.getElementById('app').style.display = 'flex';
+  requestNotificationPermission();
 
   const badge = document.getElementById('user-badge');
   if (badge) {
@@ -108,6 +140,31 @@ function doLogout() {
   document.getElementById('login-error').textContent = '';
   document.getElementById('login-screen').classList.add('active');
   document.getElementById('app').style.display = 'none';
+}
+
+// ════════════════════════════════
+//  CLÔTURE ÉVÉNEMENT
+// ════════════════════════════════
+function applyEventClosedUI() {
+  const banner = document.getElementById('event-closed-banner');
+  if (banner) banner.style.display = eventClosed ? 'block' : 'none';
+  const invBtn = document.getElementById('inv-btn');
+  if (invBtn) invBtn.style.display = eventClosed ? 'none' : '';
+  const cfgBtn = document.getElementById('cfg-close-event-btn');
+  if (cfgBtn) cfgBtn.textContent = eventClosed ? '🔓 Réouvrir l\'événement' : '🔒 Clore l\'événement';
+}
+
+function toggleEventClosed() {
+  const msg = eventClosed
+    ? 'Réouvrir l\'événement et autoriser les saisies ?'
+    : 'Clore l\'événement ? Les saisies seront désactivées pour tous les utilisateurs.';
+  if (!confirm(msg)) return;
+  eventClosed = !eventClosed;
+  saveAll();
+  applyEventClosedUI();
+  buildProducts();
+  showToast(eventClosed ? '🔒 Événement clos' : '🔓 Événement rouvert');
+  if (eventClosed) { document.getElementById('cfg-overlay').classList.remove('open'); }
 }
 
 function applyRoleRestrictions() {
@@ -333,7 +390,9 @@ let mQty = 1, mType = 'reassort', mProduct = null, mUnitMode = false;
 let _lpTimer = null, _lpFired = false;
 let log = [];
 let inventaires = [];
+let eventClosed = false;
 let idCounter = 100;
+const _notifiedAlerts = new Set();
 
 // PIN haché (SHA-256) — initialisé au démarrage
 let CONFIG_PIN_HASH  = '';
@@ -375,7 +434,11 @@ window._fbApply = function(data) {
   if (data.DAY_STOCKS){ DAY_STOCKS = data.DAY_STOCKS; changed = true; }
   if (data.currentDay){ currentDay = data.currentDay; changed = true; }
   if (data.pinHash)    { CONFIG_PIN_HASH = data.pinHash; CONFIG_PIN_LEN = data.pinLen || 3; }
-  if (data.inventaires){ inventaires = data.inventaires; }
+  if (data.inventaires)  { inventaires = data.inventaires; }
+  if (data.eventClosed !== undefined) {
+    eventClosed = data.eventClosed;
+    applyEventClosedUI();
+  }
   if (data.eventName) {
     const el = document.getElementById('event-name');
     if (el) el.textContent = data.eventName;
@@ -397,6 +460,7 @@ function saveAll() {
     pinHash: CONFIG_PIN_HASH,
     pinLen:  CONFIG_PIN_LEN,
     inventaires,
+    eventClosed,
     eventName: document.getElementById('event-name').textContent,
     updatedAt: new Date().toISOString(),
   };
@@ -536,10 +600,15 @@ function initSwipe() {
 function buildProducts() {
   const products = getBarProducts(currentBar);
   const bar = BARS.find(b => b.id === currentBar);
+  checkStockAlerts(products, currentBar);
   document.getElementById('bar-product-count').textContent = products.length + ' produits · ' + (bar ? bar.name : '');
   const el = document.getElementById('product-list');
   el.innerHTML = '';
 
+  if (eventClosed) {
+    el.innerHTML = '<div class="no-products">🔒 Événement terminé.<br>Les saisies sont désactivées.</div>';
+    return;
+  }
   if (!products.length) {
     el.innerHTML = '<div class="no-products">Aucun produit assigné à ce bar.<br>Configurez-les via ⚙ Configurer.</div>';
     return;
@@ -919,8 +988,10 @@ function buildRecap() {
       </div>
       ${depackHTML}
       <table class="rtable"><thead><tr><th>Produit</th><th>Reassort</th><th>Casse</th><th>Staff</th><th>Offert</th></tr></thead><tbody>${rows}</tbody></table>
-      <div class="chart-wrap"><div class="chart-title">Consommation par produit</div><canvas id="${chartBarId}" height="160"></canvas></div>
-      <div class="chart-wrap" style="margin-bottom:20px;"><div class="chart-title">Activité dans le temps</div><canvas id="${chartTimeId}" height="140"></canvas></div>`;
+      ${buildOffertDetail(bLog)}
+      ${buildCasseDetail(bLog)}
+      <div class="chart-wrap print-hide"><div class="chart-title">Consommation par produit</div><canvas id="${chartBarId}" height="160"></canvas></div>
+      <div class="chart-wrap print-hide" style="margin-bottom:20px;"><div class="chart-title">Activité dans le temps</div><canvas id="${chartTimeId}" height="140"></canvas></div>`;
     el.appendChild(sec);
 
     // Chart 1 : barres par produit (stacked)
@@ -986,7 +1057,59 @@ function buildRecap() {
     }
   });
 
+  // ── INVENTAIRES ──
+  const dayInvs = inventaires.filter(i => i.day === currentDay);
+  if (dayInvs.length) {
+    const invSec = document.createElement('div');
+    invSec.className = 'recap-bar-section';
+    invSec.innerHTML = `<div class="recap-bar-title" style="color:var(--c-accent)">📦 Inventaires · ${currentDay.toUpperCase()}</div>`;
+    dayInvs.forEach(inv => {
+      const time = new Date(inv.timestamp).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+      const invRows = inv.items.map(it => {
+        const cls = it.delta === 0 ? 'inv-ok' : it.delta > 0 ? 'inv-surplus' : 'inv-deficit';
+        return `<tr><td>${it.productName}</td><td>${it.calculated}</td><td>${it.physical}</td><td class="${cls}">${it.delta > 0 ? '+' : ''}${it.delta}</td></tr>`;
+      }).join('');
+      const div = document.createElement('div');
+      div.innerHTML = `
+        <div style="font-size:11px;color:var(--c-muted);font-family:var(--font-mono);margin:8px 0 4px;">${time} · ${inv.barName} · ${inv.userDisplay}</div>
+        <table class="rtable"><thead><tr><th>Produit</th><th>Calculé</th><th>Physique</th><th>Écart</th></tr></thead><tbody>${invRows}</tbody></table>`;
+      invSec.appendChild(div);
+    });
+    el.appendChild(invSec);
+    hasData = true;
+  }
+
   if (!hasData) el.innerHTML = '<div class="recap-empty">Aucune donnée enregistrée</div>';
+}
+
+function buildOffertDetail(bLog) {
+  const offerts = bLog.filter(e => e.type === 'offert');
+  if (!offerts.length) return '';
+  const rows = offerts.map(e =>
+    `<tr><td>${e.time}</td><td>${e.productName}</td><td>${e.unitMode ? e.qty+' u.' : e.qty+(e.pack>1?' pkt':' u.')}</td><td>${e.recipient||'—'}</td><td>${e.reason||'—'}</td></tr>`
+  ).join('');
+  return `<div class="offert-detail-wrap">
+    <div class="offert-detail-title">Détail des offerts</div>
+    <table class="rtable offert-table"><thead><tr><th>Heure</th><th>Produit</th><th>Qté</th><th>Pour qui</th><th>Motif</th></tr></thead><tbody>${rows}</tbody></table>
+  </div>`;
+}
+
+function buildCasseDetail(bLog) {
+  const casses = bLog.filter(e => e.type === 'casse');
+  if (!casses.length) return '';
+  const rows = casses.map(e =>
+    `<tr><td>${e.time}</td><td>${e.productName}</td><td>${e.unitMode ? e.qty+' u.' : e.qty+(e.pack>1?' pkt':' u.')}</td><td>${e.reason||'—'}</td></tr>`
+  ).join('');
+  return `<div class="offert-detail-wrap">
+    <div class="offert-detail-title" style="color:var(--c-red)">Détail des casses</div>
+    <table class="rtable offert-table"><thead><tr><th>Heure</th><th>Produit</th><th>Qté</th><th>Motif</th></tr></thead><tbody>${rows}</tbody></table>
+  </div>`;
+}
+
+function printRecap() {
+  const name = document.getElementById('event-name')?.textContent || 'Récap';
+  document.title = name + ' — ' + currentDay.toUpperCase() + ' — Gärten Stock';
+  window.print();
 }
 
 function buildTimeSlots() {
