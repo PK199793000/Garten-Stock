@@ -432,15 +432,36 @@ let BARS = [
 ];
 
 let ALL_PRODUCTS = [
-  // unitCl = centilitres par unité physique  |  portionCl = centilitres par verre servi
-  {id:'fut_blonde', name:'Fût Blonde 30L',      icon:'🍺', pack:1,  liters:30, unitCl:3000, portionCl:25,   bars:['b1','b2','b3','b4','b5'], types:['reassort','casse','staff','offert'], alertSeuil:1},
-  {id:'fut_brune',  name:'Fût Brune 30L',       icon:'🍺', pack:1,  liters:30, unitCl:3000, portionCl:25,   bars:['b1','b2','b3','b4'],     types:['reassort','casse','staff','offert'], alertSeuil:1},
-  {id:'biere_btle', name:'Bière bouteille 33cl', icon:'🍾', pack:24,            unitCl:33,   portionCl:33,   bars:['b1','b2','b3','b4'],     types:['reassort','casse','staff','offert'], alertSeuil:2},
-  {id:'eau_50',     name:'Eau 50cl',             icon:'💧', pack:24,            unitCl:50,   portionCl:50,   bars:['b1','b2','b3','b4','b5'],types:['reassort','casse','staff'],           alertSeuil:2},
-  {id:'soda_33',    name:'Soda 33cl',            icon:'🥤', pack:24,            unitCl:33,   portionCl:33,   bars:['b1','b2','b3','b4','b5'],types:['reassort','casse','staff'],           alertSeuil:2},
-  {id:'vin_bib',    name:'Vin rouge BIB 10L',    icon:'🍷', pack:1,  liters:10, unitCl:1000, portionCl:12.5, bars:['b1','b2','b3','b4','b5'],types:['reassort','casse','staff','offert'], alertSeuil:1},
-  {id:'champ_6',    name:'Champagne 75cl',       icon:'🥂', pack:6,             unitCl:75,   portionCl:14,   bars:['b5'],                    types:['reassort','casse','offert'],          alertSeuil:2},
-  {id:'spirit',     name:'Spiritueux 70cl',      icon:'🥃', pack:1,             unitCl:70,   portionCl:4,    bars:['b5'],                    types:['reassort','casse','staff','offert'],  alertSeuil:2},
+  // unitCl   = centilitres par unité physique (bouteille / fût / BIB…)
+  // portions = tableau de formats de vente — plusieurs si un produit se vend en verres ET en bouteilles
+  //            { id, label, portionCl }  — portionCl = cL par portion servie au client
+  {id:'fut_blonde', name:'Fût Blonde 30L',      icon:'🍺', pack:1,  liters:30, unitCl:3000,
+    portions:[{id:'demi', label:'Demi (25 cL)', portionCl:25}],
+    bars:['b1','b2','b3','b4','b5'], types:['reassort','casse','staff','offert'], alertSeuil:1},
+  {id:'fut_brune',  name:'Fût Brune 30L',       icon:'🍺', pack:1,  liters:30, unitCl:3000,
+    portions:[{id:'demi', label:'Demi (25 cL)', portionCl:25}],
+    bars:['b1','b2','b3','b4'],     types:['reassort','casse','staff','offert'], alertSeuil:1},
+  {id:'biere_btle', name:'Bière bouteille 33cl', icon:'🍾', pack:24, unitCl:33,
+    portions:[{id:'btle', label:'Bouteille (33 cL)', portionCl:33}],
+    bars:['b1','b2','b3','b4'],     types:['reassort','casse','staff','offert'], alertSeuil:2},
+  {id:'eau_50',     name:'Eau 50cl',             icon:'💧', pack:24, unitCl:50,
+    portions:[{id:'btle', label:'Bouteille (50 cL)', portionCl:50}],
+    bars:['b1','b2','b3','b4','b5'],types:['reassort','casse','staff'],           alertSeuil:2},
+  {id:'soda_33',    name:'Soda 33cl',            icon:'🥤', pack:24, unitCl:33,
+    portions:[{id:'can', label:'Canette (33 cL)', portionCl:33}],
+    bars:['b1','b2','b3','b4','b5'],types:['reassort','casse','staff'],           alertSeuil:2},
+  {id:'vin_bib',    name:'Vin rouge BIB 10L',    icon:'🍷', pack:1,  liters:10, unitCl:1000,
+    portions:[
+      {id:'verre',    label:'Au verre (12,5 cL)',  portionCl:12.5},
+      {id:'bouteille',label:'À la bouteille (75 cL)', portionCl:75},
+    ],
+    bars:['b1','b2','b3','b4','b5'],types:['reassort','casse','staff','offert'], alertSeuil:1},
+  {id:'champ_6',    name:'Champagne 75cl',       icon:'🥂', pack:6,  unitCl:75,
+    portions:[{id:'flute', label:'Flûte (14 cL)', portionCl:14}],
+    bars:['b5'],                    types:['reassort','casse','offert'],          alertSeuil:2},
+  {id:'spirit',     name:'Spiritueux 70cl',      icon:'🥃', pack:1,  unitCl:70,
+    portions:[{id:'dose', label:'Dose (4 cL)', portionCl:4}],
+    bars:['b5'],                    types:['reassort','casse','staff','offert'],  alertSeuil:2},
 ];
 
 let STOCKS = {
@@ -506,46 +527,72 @@ function calcStock(barId, productId) {
 // Ventes caisse (verres)   = saisies directeur dans le récap
 // Écart                    = ventes réelles − théoriques
 
+// Normalise p.portions : gère le format legacy portionCl (scalaire) et le nouveau tableau.
+function getPortions(p) {
+  if (Array.isArray(p.portions) && p.portions.length) return p.portions;
+  if (p.portionCl) return [{id:'default', label:'Verre', portionCl: p.portionCl}];
+  return [];
+}
+
 function calcReconProduct(barId, p) {
-  if (!p.unitCl || !p.portionCl) return null;
+  const portions = getPortions(p);
+  if (!p.unitCl || !portions.length) return null;
+
   const packSize = p.pack || 1;
   const pLog = log.filter(e => e.barId === barId && e.productId === p.id);
 
   let clSorti = 0, clRetour = 0, clPertes = 0;
-
   pLog.forEach(e => {
-    // Si unitMode : e.qty est en unités individuelles ; sinon en packs
     const qCl = e.unitMode && packSize > 1
       ? e.qty * p.unitCl
       : e.qty * packSize * p.unitCl;
-
-    if (e.type === 'reassort')     clSorti  += qCl;
-    else if (e.type === 'retour')  clRetour += qCl;
-    else                           clPertes += qCl; // casse / staff / offert / entame
+    if (e.type === 'reassort')    clSorti  += qCl;
+    else if (e.type === 'retour') clRetour += qCl;
+    else                          clPertes += qCl;
   });
 
   const clDispo = clSorti - clRetour - clPertes;
-  const portionsTheo = p.portionCl > 0 ? clDispo / p.portionCl : 0;
-  const portionsReel = ventesCaisse[barId]?.[p.id] ?? null;
-  const clReel       = portionsReel !== null ? portionsReel * p.portionCl : null;
-  const ecartCl      = clReel !== null ? clReel - clDispo : null;
-  const ecartPct     = clDispo > 0 && ecartCl !== null ? ecartCl / clDispo * 100 : null;
+
+  // ventesCaisse[barId][productId] peut être :
+  //  - un objet { portionId: qty }  (format actuel)
+  //  - un nombre                    (format legacy, migré vers la 1ère portion)
+  const raw = ventesCaisse[barId]?.[p.id];
+  const salesObj = (raw !== null && typeof raw === 'object') ? raw
+                 : (typeof raw === 'number' && portions[0]) ? {[portions[0].id]: raw}
+                 : {};
+
+  // Détail par format de vente
+  const portionDetails = portions.map(por => {
+    const qty = salesObj[por.id] ?? null;
+    return { ...por, qty, clVendu: qty !== null ? qty * por.portionCl : 0 };
+  });
+
+  const anySaisie = portionDetails.some(d => d.qty !== null);
+  const clReel    = anySaisie ? portionDetails.reduce((s,d) => s + d.clVendu, 0) : null;
+  const ecartCl   = clReel !== null ? clReel - clDispo : null;
+  const ecartPct  = clDispo > 0 && ecartCl !== null ? ecartCl / clDispo * 100 : null;
+
+  // Verres théoriques en utilisant la première portion comme référence (pour affichage)
+  const refPortion = portions[0];
+  const theoPrimary = refPortion.portionCl > 0 ? clDispo / refPortion.portionCl : 0;
 
   return {
-    name: p.name, unitCl: p.unitCl, portionCl: p.portionCl,
+    name: p.name, unitCl: p.unitCl, portions,
     clSorti: Math.round(clSorti), clRetour: Math.round(clRetour),
     clPertes: Math.round(clPertes), clDispo: Math.round(clDispo),
-    portionsTheo: Math.round(portionsTheo * 10) / 10,
-    portionsReel,
-    ecartCl:  ecartCl  !== null ? Math.round(ecartCl)            : null,
-    ecartPct: ecartPct !== null ? Math.round(ecartPct * 10) / 10 : null,
+    portionDetails, theoPrimary: Math.round(theoPrimary * 10) / 10,
+    clReel:   clReel   !== null ? Math.round(clReel)               : null,
+    ecartCl:  ecartCl  !== null ? Math.round(ecartCl)              : null,
+    ecartPct: ecartPct !== null ? Math.round(ecartPct * 10) / 10   : null,
   };
 }
 
-function saveVentes(barId, productId, val) {
+function saveVentes(barId, productId, portionId, val) {
   if (!ventesCaisse[barId]) ventesCaisse[barId] = {};
+  if (!ventesCaisse[barId][productId] || typeof ventesCaisse[barId][productId] !== 'object')
+    ventesCaisse[barId][productId] = {};
   const v = parseFloat(val);
-  ventesCaisse[barId][productId] = isNaN(v) ? null : v;
+  ventesCaisse[barId][productId][portionId] = isNaN(v) ? null : v;
   saveAll();
 }
 
@@ -1208,32 +1255,46 @@ function buildRecap() {
     }
 
     // ── RÉCONCILIATION CAISSE ──
-    const barProdsWithConv = ALL_PRODUCTS.filter(p => p.bars.includes(bar.id) && p.unitCl && p.portionCl);
+    const barProdsWithConv = ALL_PRODUCTS.filter(p => p.bars.includes(bar.id) && p.unitCl && getPortions(p).length);
     if (barProdsWithConv.length) {
       const isDir = CURRENT_USER?.role === 'directeur';
       const reconRows = barProdsWithConv.map(p => {
         const r = calcReconProduct(bar.id, p);
-        if (!r) return '';
-        if (r.clSorti === 0) return ''; // rien sorti pour ce produit dans ce bar
+        if (!r || r.clSorti === 0) return '';
 
         const ecartClass = r.ecartCl === null ? '' : r.ecartCl > 0 ? 'recon-pos' : r.ecartCl < 0 ? 'recon-neg' : 'recon-zero';
         const ecartStr = r.ecartCl === null ? '—'
           : `${r.ecartCl > 0 ? '+' : ''}${r.ecartCl} cL (${r.ecartPct > 0 ? '+' : ''}${r.ecartPct}%)`;
-        const portionsTheoStr = `${r.portionsTheo} (× ${r.portionCl} cL)`;
-        const inputOrVal = isDir
-          ? `<input class="recon-ventes-input" type="number" min="0" step="1"
-               value="${r.portionsReel !== null ? r.portionsReel : ''}"
-               placeholder="?"
-               onchange="saveVentes('${bar.id}','${p.id}',this.value);buildRecap();">`
-          : (r.portionsReel !== null ? `<strong>${r.portionsReel}</strong>` : '<span style="color:var(--c-muted)">—</span>');
+
+        // Colonne "Verres théo." : si 1 seul format → nombre de portions ; sinon affiche le volume dispo
+        const theoCell = r.portions.length === 1
+          ? `${r.theoPrimary} × ${r.portions[0].label}`
+          : `${r.clDispo.toLocaleString('fr-FR')} cL dispo`;
+
+        // Colonne "Ventes caisse" : une ligne par format de vente
+        const ventesLines = r.portionDetails.map(d => {
+          const inp = isDir
+            ? `<input class="recon-ventes-input" type="number" min="0" step="1"
+                 value="${d.qty !== null ? d.qty : ''}" placeholder="?"
+                 title="${d.label}"
+                 onchange="saveVentes('${bar.id}','${p.id}','${d.id}',this.value);">`
+            : (d.qty !== null ? `<strong>${d.qty}</strong>` : '<span style="color:var(--c-muted)">—</span>');
+          const clLine = d.qty !== null
+            ? `<span class="recon-cl-hint">= ${Math.round(d.qty * d.portionCl)} cL</span>`
+            : '';
+          return `<div class="recon-ventes-line"><span class="recon-portion-lbl">${d.label}</span>${inp}${clLine}</div>`;
+        }).join('');
+
+        const totalLine = r.clReel !== null && r.portionDetails.length > 1
+          ? `<div class="recon-ventes-total">Total : ${r.clReel} cL</div>` : '';
 
         return `<tr>
           <td><strong>${p.icon}</strong> ${p.name}</td>
           <td class="recon-num">${r.clSorti.toLocaleString('fr-FR')} cL</td>
           <td class="recon-num recon-loss">${r.clPertes > 0 ? '−'+r.clPertes : '—'}</td>
           <td class="recon-num">${r.clDispo.toLocaleString('fr-FR')} cL</td>
-          <td class="recon-num recon-theo">${portionsTheoStr}</td>
-          <td class="recon-num recon-input-cell">${inputOrVal}</td>
+          <td class="recon-num recon-theo">${theoCell}</td>
+          <td class="recon-ventes-cell">${ventesLines}${totalLine}</td>
           <td class="recon-num ${ecartClass}">${ecartStr}</td>
         </tr>`;
       }).filter(Boolean).join('');
@@ -1244,25 +1305,18 @@ function buildRecap() {
         reconSec.innerHTML = `
           <div class="recon-title">📊 Réconciliation caisse / stock</div>
           <div class="recon-legend">
-            Unité pivot : <strong>centilitres (cL)</strong> — tout est ramené au même référentiel.
-            ${isDir ? 'Saisissez les <strong>verres vendus</strong> selon votre caisse POS.' : ''}
+            Unité pivot : <strong>centilitres (cL)</strong>.
+            ${isDir ? 'Saisissez les quantités vendues par format (données POS / caisse).' : ''}
           </div>
           <div class="recon-table-wrap">
             <table class="recon-table">
               <thead><tr>
-                <th>Produit</th>
-                <th>Sorti camion</th>
-                <th>Pertes</th>
-                <th>Dispo vente</th>
-                <th>Verres théo.</th>
-                <th>Ventes caisse</th>
-                <th>Écart</th>
+                <th>Produit</th><th>Sorti camion</th><th>Pertes</th>
+                <th>Dispo vente</th><th>Théorique</th>
+                <th>Ventes caisse (POS)</th><th>Écart</th>
               </tr></thead>
               <tbody>${reconRows}</tbody>
             </table>
-          </div>
-          <div class="recon-footer">
-            Verres théo. = Volume dispo ÷ portion (${barProdsWithConv.map(p=>p.portionCl+' cL / '+p.name.split(' ')[0]).join(' · ')})
           </div>`;
         sec.appendChild(reconSec);
       }
@@ -1496,29 +1550,94 @@ function renderCfgProds() {
     block.appendChild(alertRow);
 
     // Contenance / Portion (réconciliation caisse)
-    const convRow = document.createElement('div');
-    convRow.className = 'cfg-conv-row';
-    convRow.innerHTML = `
+    // ── Réconciliation : contenance + formats de vente ──
+    const convBlock = document.createElement('div');
+    convBlock.className = 'cfg-conv-block';
+    convBlock.id = 'cfg-conv-' + p.id;
+
+    // Ligne contenance unitaire (unique pour le produit)
+    const unitClRow = document.createElement('div');
+    unitClRow.className = 'cfg-conv-row';
+    unitClRow.innerHTML = `
       <span class="cfg-conv-lbl">📊 Réconciliation</span>
       <label class="cfg-conv-field">
         <span>Contenance (cL/unité)</span>
         <input type="number" min="0" step="0.5" class="cfg-conv-inp" data-pid="${p.id}" data-field="unitCl"
           value="${p.unitCl !== undefined ? p.unitCl : ''}" placeholder="ex: 33">
-      </label>
-      <label class="cfg-conv-field">
-        <span>Portion (cL/verre)</span>
-        <input type="number" min="0" step="0.5" class="cfg-conv-inp" data-pid="${p.id}" data-field="portionCl"
-          value="${p.portionCl !== undefined ? p.portionCl : ''}" placeholder="ex: 25">
       </label>`;
-    convRow.querySelectorAll('input').forEach(inp => {
-      inp.addEventListener('input', e => {
-        const idx2 = cfgProds.findIndex(x => x.id === e.target.dataset.pid);
-        if (idx2 === -1) return;
-        const v = parseFloat(e.target.value);
-        cfgProds[idx2][e.target.dataset.field] = isNaN(v) ? undefined : v;
-      });
+    unitClRow.querySelector('input').addEventListener('input', e => {
+      const idx2 = cfgProds.findIndex(x => x.id === e.target.dataset.pid);
+      if (idx2 === -1) return;
+      const v = parseFloat(e.target.value);
+      cfgProds[idx2].unitCl = isNaN(v) ? undefined : v;
     });
-    block.appendChild(convRow);
+    convBlock.appendChild(unitClRow);
+
+    // Formats de vente (tableau portions)
+    const portionsSection = document.createElement('div');
+    portionsSection.className = 'cfg-portions-section';
+    portionsSection.id = 'cfg-portions-' + p.id;
+    convBlock.appendChild(portionsSection);
+
+    function renderPortions(pid) {
+      const idx2 = cfgProds.findIndex(x => x.id === pid);
+      if (idx2 === -1) return;
+      const cp = cfgProds[idx2];
+      if (!Array.isArray(cp.portions)) cp.portions = [];
+      const sec = document.getElementById('cfg-portions-' + pid);
+      if (!sec) return;
+      sec.innerHTML = '';
+
+      const hdr = document.createElement('div');
+      hdr.className = 'cfg-portions-hdr';
+      hdr.innerHTML = `<span class="cfg-conv-sublbl">Formats de vente (POS)</span>
+        <button class="cfg-add-portion-btn" onclick="addCfgPortion('${pid}')">➕ Format</button>`;
+      sec.appendChild(hdr);
+
+      cp.portions.forEach((por, pi) => {
+        const row = document.createElement('div');
+        row.className = 'cfg-portion-row';
+        row.innerHTML = `
+          <input class="cfg-portion-label" type="text" value="${por.label}" placeholder="Ex : Au verre"
+            onchange="updateCfgPortion('${pid}',${pi},'label',this.value)">
+          <input class="cfg-conv-inp" type="number" min="0" step="0.5" value="${por.portionCl}"
+            placeholder="cL" title="Centilitres par portion"
+            onchange="updateCfgPortion('${pid}',${pi},'portionCl',parseFloat(this.value))">
+          <span class="cfg-portion-unit">cL</span>
+          <button class="cfg-del-btn" onclick="deleteCfgPortion('${pid}',${pi})">✕</button>`;
+        sec.appendChild(row);
+      });
+
+      if (!cp.portions.length) {
+        const empty = document.createElement('div');
+        empty.className = 'cfg-portions-empty';
+        empty.textContent = 'Aucun format — cliquez ➕ pour ajouter';
+        sec.appendChild(empty);
+      }
+    }
+
+    // Expose helpers sur window pour les inline onclick
+    window.addCfgPortion = function(pid) {
+      const idx2 = cfgProds.findIndex(x => x.id === pid);
+      if (idx2 === -1) return;
+      if (!Array.isArray(cfgProds[idx2].portions)) cfgProds[idx2].portions = [];
+      cfgProds[idx2].portions.push({id: 'fmt_'+Date.now(), label: 'Format '+( cfgProds[idx2].portions.length+1), portionCl: 25});
+      renderPortions(pid);
+    };
+    window.updateCfgPortion = function(pid, pi, field, val) {
+      const idx2 = cfgProds.findIndex(x => x.id === pid);
+      if (idx2 === -1) return;
+      if (cfgProds[idx2].portions[pi]) cfgProds[idx2].portions[pi][field] = val;
+    };
+    window.deleteCfgPortion = function(pid, pi) {
+      const idx2 = cfgProds.findIndex(x => x.id === pid);
+      if (idx2 === -1) return;
+      cfgProds[idx2].portions.splice(pi, 1);
+      renderPortions(pid);
+    };
+
+    renderPortions(p.id);
+    block.appendChild(convBlock);
 
     const typesWrap = document.createElement('div');
     typesWrap.className = 'cfg-types-wrap';
