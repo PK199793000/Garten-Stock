@@ -543,11 +543,15 @@ function calcStock(barId, productId) {
 //    clDispo = clSorti − clRetour − clPertes
 
 function _portionCl(p) {
-  return p.salesMode === 'unit' ? p.unitCl : (p.portionCl || p.unitCl);
+  const mode = p.salesMode || (p.portionCl && p.portionCl !== p.unitCl ? 'portion' : 'unit');
+  return mode === 'unit' ? p.unitCl : (p.portionCl || p.unitCl);
 }
 
 function calcReconProduct(barId, p) {
-  if (!p.unitCl || !p.salesMode) return null;
+  if (!p.unitCl) return null;
+  // Dériver salesMode si absent (données legacy)
+  const salesMode = p.salesMode
+    || (p.portionCl && p.portionCl !== p.unitCl ? 'portion' : 'unit');
 
   const packSize = p.pack || 1;
   const pCl = _portionCl(p);
@@ -574,7 +578,7 @@ function calcReconProduct(barId, p) {
   const ecartPct  = theoQty > 0 && ecartQty !== null ? ecartQty / theoQty * 100 : null;
 
   return {
-    salesMode: p.salesMode,
+    salesMode,
     unitCl: p.unitCl,
     portionCl: pCl,
     packSize,
@@ -604,12 +608,47 @@ function getBarProducts(barId) {
 // ════════════════════════════════
 //  FIREBASE PERSISTENCE
 // ════════════════════════════════
+
+// Migration : ajoute salesMode/unitCl/portionCl aux produits qui n'ont pas encore ces champs
+// (données Firebase sauvegardées avant l'introduction du système de réconciliation)
+function migrateProduct(p) {
+  if (p.salesMode) return p; // déjà migré
+
+  const out = { ...p };
+
+  // Legacy format avec portions[] (tableau)
+  if (Array.isArray(p.portions) && p.portions.length) {
+    out.salesMode = 'portion';
+    if (!out.portionCl) out.portionCl = p.portions[0].portionCl;
+    delete out.portions;
+    return out;
+  }
+
+  // Produit avec unitCl + portionCl distincts → portion
+  if (p.unitCl && p.portionCl && p.portionCl !== p.unitCl) {
+    out.salesMode = 'portion';
+    return out;
+  }
+
+  // Produit avec unitCl seul (portionCl absent ou égal à unitCl) → unité
+  if (p.unitCl) {
+    out.salesMode = 'unit';
+    return out;
+  }
+
+  // Pas de champs de réconciliation → on laisse sans salesMode (désactivé)
+  return out;
+}
+
 window._fbApply = function(data) {
   let changed = false;
   if (data.log)      { log = data.log;              changed = true; }
   if (data.STOCKS)   { STOCKS = data.STOCKS;         changed = true; }
   if (data.BARS)     { BARS = data.BARS;             changed = true; }
-  if (data.PRODUCTS) { ALL_PRODUCTS = data.PRODUCTS; changed = true; }
+  if (data.PRODUCTS) {
+    ALL_PRODUCTS = data.PRODUCTS.map(p => migrateProduct(p));
+    changed = true;
+  }
   if (data.days)     { days = data.days;             changed = true; }
   if (data.DAY_STOCKS){ DAY_STOCKS = data.DAY_STOCKS; changed = true; }
   if (data.currentDay){ currentDay = data.currentDay; changed = true; }
@@ -1256,7 +1295,7 @@ function buildRecap() {
     }
 
     // ── RÉCONCILIATION CAISSE ──
-    const barProdsWithConv = ALL_PRODUCTS.filter(p => p.bars.includes(bar.id) && p.unitCl && p.salesMode);
+    const barProdsWithConv = ALL_PRODUCTS.filter(p => p.bars.includes(bar.id) && p.unitCl);
     if (barProdsWithConv.length) {
       const isDir = CURRENT_USER?.role === 'directeur';
 
