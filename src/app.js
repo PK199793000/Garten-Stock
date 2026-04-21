@@ -1597,74 +1597,102 @@ function renderCfgProds() {
     });
     block.appendChild(alertRow);
 
-    // Contenance / Portion (réconciliation caisse)
     // ── Réconciliation caisse : mode de vente ──
     const convBlock = document.createElement('div');
     convBlock.className = 'cfg-conv-block';
-    convBlock.id = 'cfg-conv-' + p.id;
 
-    function renderConvBlock(pid, targetEl) {
-      const idx2 = cfgProds.findIndex(x => x.id === pid);
-      if (idx2 === -1) return;
-      const cp = cfgProds[idx2];
-      const mode = cp.salesMode || 'none';
-      const cb = targetEl || document.getElementById('cfg-conv-' + pid);
-      if (!cb) return;
-      cb.innerHTML = `
-        <div class="cfg-conv-row">
-          <span class="cfg-conv-lbl">📊 Réconciliation</span>
-          <label class="cfg-sale-mode-opt ${mode==='none'?'active':''}">
-            <input type="radio" name="smode-${pid}" value="none" ${mode==='none'?'checked':''}>
-            Désactivé
-          </label>
-          <label class="cfg-sale-mode-opt ${mode==='unit'?'active':''}">
-            <input type="radio" name="smode-${pid}" value="unit" ${mode==='unit'?'checked':''}>
-            📦 À l'unité
-          </label>
-          <label class="cfg-sale-mode-opt ${mode==='portion'?'active':''}">
-            <input type="radio" name="smode-${pid}" value="portion" ${mode==='portion'?'checked':''}>
-            🫗 À la portion
-          </label>
-        </div>
+    // Titre
+    const convRow = document.createElement('div');
+    convRow.className = 'cfg-conv-row';
+    const convLbl = document.createElement('span');
+    convLbl.className = 'cfg-conv-lbl';
+    convLbl.textContent = '📊 Réconciliation';
+    convRow.appendChild(convLbl);
 
-        ${mode !== 'none' ? `
-        <div class="cfg-conv-fields">
-          <label class="cfg-conv-field">
-            <span>${mode === 'unit' ? 'cL par unité (ex: 50 pour 50cl)' : 'cL de l\'unité logistique (ex: 1000 pour BIB 10L)'}</span>
-            <input type="number" min="0" step="0.5" class="cfg-conv-inp" id="cfg-unitCl-${pid}"
-              value="${cp.unitCl !== undefined ? cp.unitCl : ''}" placeholder="cL">
-          </label>
-          ${mode === 'portion' ? `
-          <label class="cfg-conv-field">
-            <span>cL par dose servie (ex: 12.5 pour un verre de vin)</span>
-            <input type="number" min="0" step="0.5" class="cfg-conv-inp" id="cfg-portionCl-${pid}"
-              value="${cp.portionCl !== undefined ? cp.portionCl : ''}" placeholder="cL">
-          </label>` : ''}
-        </div>` : ''}`;
+    // 3 boutons radio (Désactivé / À l'unité / À la portion)
+    const modeOpts = [
+      {val:'none',    txt:'Désactivé'},
+      {val:'unit',    txt:'📦 À l\'unité'},
+      {val:'portion', txt:'🫗 À la portion'},
+    ];
+    const currentMode = p.salesMode || 'none';
+    modeOpts.forEach(opt => {
+      const lbl = document.createElement('label');
+      lbl.className = 'cfg-sale-mode-opt' + (currentMode === opt.val ? ' active' : '');
+      const radio = document.createElement('input');
+      radio.type = 'radio';
+      radio.name = 'smode-' + p.id;
+      radio.value = opt.val;
+      radio.checked = currentMode === opt.val;
+      lbl.appendChild(radio);
+      lbl.appendChild(document.createTextNode(' ' + opt.txt));
+      convRow.appendChild(lbl);
+    });
+    convBlock.appendChild(convRow);
 
-      // Listeners radio
-      cb.querySelectorAll(`input[name="smode-${pid}"]`).forEach(r => {
-        r.addEventListener('change', e => {
-          const i2 = cfgProds.findIndex(x => x.id === pid);
-          if (i2 === -1) return;
-          cfgProds[i2].salesMode = e.target.value === 'none' ? undefined : e.target.value;
-          renderConvBlock(pid);
-        });
+    // Champs numériques (cachés si mode=none)
+    const convFields = document.createElement('div');
+    convFields.className = 'cfg-conv-fields';
+    convFields.style.display = currentMode === 'none' ? 'none' : 'flex';
+
+    const unitClField = document.createElement('label');
+    unitClField.className = 'cfg-conv-field';
+    const unitClSpan = document.createElement('span');
+    unitClSpan.textContent = currentMode === 'unit'
+      ? 'cL par unité (ex: 50 pour 50cl)'
+      : 'cL de l\'unité logistique (ex: 1000 pour BIB 10L)';
+    const unitClInp = document.createElement('input');
+    unitClInp.type = 'number'; unitClInp.min = '0'; unitClInp.step = '0.5';
+    unitClInp.className = 'cfg-conv-inp'; unitClInp.placeholder = 'cL';
+    if (p.unitCl !== undefined) unitClInp.value = p.unitCl;
+    unitClField.appendChild(unitClSpan);
+    unitClField.appendChild(unitClInp);
+    convFields.appendChild(unitClField);
+
+    const portionClField = document.createElement('label');
+    portionClField.className = 'cfg-conv-field';
+    portionClField.style.display = currentMode === 'portion' ? 'flex' : 'none';
+    const portionClSpan = document.createElement('span');
+    portionClSpan.textContent = 'cL par dose servie (ex: 12.5 pour un verre de vin)';
+    const portionClInp = document.createElement('input');
+    portionClInp.type = 'number'; portionClInp.min = '0'; portionClInp.step = '0.5';
+    portionClInp.className = 'cfg-conv-inp'; portionClInp.placeholder = 'cL';
+    if (p.portionCl !== undefined) portionClInp.value = p.portionCl;
+    portionClField.appendChild(portionClSpan);
+    portionClField.appendChild(portionClInp);
+    convFields.appendChild(portionClField);
+
+    convBlock.appendChild(convFields);
+
+    // Event : changement de mode radio
+    convRow.querySelectorAll('input[type=radio]').forEach(radio => {
+      radio.addEventListener('change', e => {
+        const newMode = e.target.value;
+        const idx2 = cfgProds.findIndex(x => x.id === p.id);
+        if (idx2 !== -1) cfgProds[idx2].salesMode = newMode === 'none' ? undefined : newMode;
+        // Mettre à jour active class
+        convRow.querySelectorAll('.cfg-sale-mode-opt').forEach(l => l.classList.remove('active'));
+        e.target.closest('.cfg-sale-mode-opt')?.classList.add('active');
+        // Afficher / masquer les champs
+        convFields.style.display = newMode === 'none' ? 'none' : 'flex';
+        portionClField.style.display = newMode === 'portion' ? 'flex' : 'none';
+        // Mettre à jour le label unitCl
+        unitClSpan.textContent = newMode === 'unit'
+          ? 'cL par unité (ex: 50 pour 50cl)'
+          : 'cL de l\'unité logistique (ex: 1000 pour BIB 10L)';
       });
-      // Listeners number inputs
-      const uInp = cb.querySelector(`#cfg-unitCl-${pid}`);
-      if (uInp) uInp.addEventListener('input', e => {
-        const i2 = cfgProds.findIndex(x => x.id === pid);
-        if (i2 !== -1) cfgProds[i2].unitCl = parseFloat(e.target.value) || undefined;
-      });
-      const pInp = cb.querySelector(`#cfg-portionCl-${pid}`);
-      if (pInp) pInp.addEventListener('input', e => {
-        const i2 = cfgProds.findIndex(x => x.id === pid);
-        if (i2 !== -1) cfgProds[i2].portionCl = parseFloat(e.target.value) || undefined;
-      });
-    }
+    });
 
-    renderConvBlock(p.id, convBlock);  // passe l'élément directement (pas encore dans le DOM)
+    // Events : champs numériques
+    unitClInp.addEventListener('input', e => {
+      const idx2 = cfgProds.findIndex(x => x.id === p.id);
+      if (idx2 !== -1) cfgProds[idx2].unitCl = parseFloat(e.target.value) || undefined;
+    });
+    portionClInp.addEventListener('input', e => {
+      const idx2 = cfgProds.findIndex(x => x.id === p.id);
+      if (idx2 !== -1) cfgProds[idx2].portionCl = parseFloat(e.target.value) || undefined;
+    });
+
     block.appendChild(convBlock);
 
     const typesWrap = document.createElement('div');
