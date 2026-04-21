@@ -1564,12 +1564,12 @@ function renderCfgProds() {
     convBlock.className = 'cfg-conv-block';
     convBlock.id = 'cfg-conv-' + p.id;
 
-    function renderConvBlock(pid) {
+    function renderConvBlock(pid, targetEl) {
       const idx2 = cfgProds.findIndex(x => x.id === pid);
       if (idx2 === -1) return;
       const cp = cfgProds[idx2];
       const mode = cp.salesMode || 'none';
-      const cb = document.getElementById('cfg-conv-' + pid);
+      const cb = targetEl || document.getElementById('cfg-conv-' + pid);
       if (!cb) return;
       cb.innerHTML = `
         <div class="cfg-conv-row">
@@ -1625,7 +1625,7 @@ function renderCfgProds() {
       });
     }
 
-    renderConvBlock(p.id);
+    renderConvBlock(p.id, convBlock);  // passe l'élément directement (pas encore dans le DOM)
     block.appendChild(convBlock);
 
     const typesWrap = document.createElement('div');
