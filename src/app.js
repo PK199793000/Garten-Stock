@@ -827,7 +827,14 @@ function buildProducts() {
   el.innerHTML = '';
 
   if (eventClosed) {
-    el.innerHTML = '<div class="no-products">🔒 Événement terminé.<br>Les saisies sont désactivées.</div>';
+    const isDir = CURRENT_USER?.role === 'directeur';
+    el.innerHTML = `
+      <div class="event-locked-screen">
+        <div class="event-locked-icon">🔒</div>
+        <div class="event-locked-title">Événement terminé</div>
+        <div class="event-locked-sub">Les saisies sont désactivées.</div>
+        ${isDir ? `<button class="event-locked-reopen-btn" onclick="toggleEventClosed()">🔓 Réouvrir l'événement</button>` : ''}
+      </div>`;
     return;
   }
   if (!products.length) {

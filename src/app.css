@@ -438,6 +438,12 @@ html,body{height:100%;background:var(--c-bg);color:var(--c-text);font-family:var
 
 /* ── EVENT CLOSED BANNER ── */
 .event-closed-banner{display:none;background:rgba(224,82,82,.12);border-bottom:1px solid rgba(224,82,82,.3);color:var(--c-red);font-size:12px;font-weight:700;font-family:var(--font-mono);text-align:center;padding:8px 16px;letter-spacing:.05em;}
+.event-locked-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 24px;gap:12px;}
+.event-locked-icon{font-size:48px;}
+.event-locked-title{font-family:var(--font-head);font-size:20px;font-weight:700;letter-spacing:.04em;}
+.event-locked-sub{font-size:13px;color:var(--c-muted);}
+.event-locked-reopen-btn{margin-top:16px;padding:14px 28px;background:rgba(232,197,71,.12);border:1.5px solid rgba(232,197,71,.4);border-radius:12px;font-family:var(--font-head);font-size:14px;font-weight:700;color:var(--c-accent);cursor:pointer;letter-spacing:.04em;}
+.event-locked-reopen-btn:active{background:rgba(232,197,71,.25);}
 
 /* ── OFFERTS / CASSES DETAIL IN RECAP ── */
 .offert-detail-wrap{margin:12px 0 4px;}
