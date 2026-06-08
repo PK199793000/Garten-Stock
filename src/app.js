@@ -1555,6 +1555,7 @@ let cfgBars = [], cfgProds = [];
 function openConfig() {
   cfgBars  = BARS.map(b => ({...b}));
   cfgProds = ALL_PRODUCTS.map(p => ({...p, bars:[...p.bars], types:[...(p.types||['reassort','casse','staff','offert'])]}));
+  console.log('[openConfig] BARS:', BARS.length, 'cfgBars:', cfgBars.length, BARS.map(b=>b.id));
   document.getElementById('cfg-event').value = document.getElementById('event-name').textContent;
   renderCfgDays();
   renderCfgBars();
@@ -1776,8 +1777,9 @@ function renderCfgProds() {
     const checksRow = document.createElement('div');
     checksRow.className = 'cfg-bars-checks';
     checksRow.id = 'bchecks-' + p.id;
-    // Build bar checkboxes inline (direct DOM ref, no getElementById)
-    cfgBars.forEach(bar => {
+    // Build bar checkboxes inline — use BARS as fallback if cfgBars not ready
+    const activeBars = cfgBars.length ? cfgBars : BARS;
+    activeBars.forEach(bar => {
       const checked = p.bars.includes(bar.id);
       const lbl = document.createElement('label');
       lbl.className = 'cfg-bar-check';
@@ -1826,7 +1828,8 @@ function renderProdBarWidgets(pid) {
   const checksRow = document.getElementById('bchecks-'+pid);
   if (checksRow) {
     checksRow.innerHTML = '';
-    cfgBars.forEach(bar => {
+    const activeBars = cfgBars.length ? cfgBars : BARS;
+    activeBars.forEach(bar => {
       const checked = p.bars.includes(bar.id);
       const lbl = document.createElement('label');
       lbl.className = 'cfg-bar-check';
@@ -1856,7 +1859,8 @@ function renderStockGrid(pid) {
   const grid = document.getElementById('sgrid-'+pid);
   if (!p || !grid) return;
   grid.innerHTML = '';
-  const assignedBars = cfgBars.filter(b => p.bars.includes(b.id));
+  const activeBars = cfgBars.length ? cfgBars : BARS;
+  const assignedBars = activeBars.filter(b => p.bars.includes(b.id));
   if (!assignedBars.length) { grid.innerHTML = '<span style="font-size:11px;color:var(--c-muted);font-family:var(--font-mono);">Aucun bar sélectionné</span>'; return; }
   assignedBars.forEach(bar => {
     const val  = (STOCKS[bar.id] && STOCKS[bar.id][pid]) || 0;
