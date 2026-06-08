@@ -408,6 +408,7 @@ html,body{height:100%;background:var(--c-bg);color:var(--c-text);font-family:var
 .export-row{display:flex;gap:8px;padding:0 16px 80px;margin-top:8px;}
 .export-btn{flex:1;padding:14px;background:var(--c-surface);border:1px solid var(--c-border2);border-radius:12px;font-family:var(--font-head);font-size:13px;font-weight:700;cursor:pointer;color:var(--c-text);letter-spacing:.02em;}
 .export-btn-print{border-color:rgba(232,197,71,.3);color:var(--c-accent);}
+.export-btn-recap{border-color:rgba(82,196,122,.3);color:#52c47a;}
 
 /* ── FIN D'ÉVÉNEMENT BAR ── */
 .fin-event-bar{padding:12px 16px 8px;display:flex;flex-direction:column;align-items:center;gap:8px;flex-shrink:0;background:var(--c-bg);border-top:1px solid var(--c-border2);}
@@ -470,7 +471,8 @@ html,body{height:100%;background:var(--c-bg);color:var(--c-text);font-family:var
   body{background:#fff !important;color:#000 !important;}
   .login-screen,.navbar,.topbar,.bar-selector,.day-selector,.toast,
   .export-row,.print-hide,.fin-event-bar,.inv-overlay,.fin-overlay,.cfg-overlay,.pin-overlay,.recon-section,
-  .overlay,.user-modal-overlay,.csv-import-overlay,.event-closed-banner{display:none !important;}
+  .overlay,.user-modal-overlay,.event-closed-banner,
+  #csv-import-overlay{display:none !important;}
   #app{display:block !important;height:auto !important;overflow:visible !important;}
   .screen{display:block !important;overflow:visible !important;height:auto !important;}
   .screen:not(#screen-recap){display:none !important;}

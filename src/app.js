@@ -500,7 +500,8 @@ async function initPinHash() {
 // ════════════════════════════════
 function calcStock(barId, productId) {
   const init = (STOCKS[barId] && STOCKS[barId][productId]) || 0;
-  const dayLog = log.filter(e => e.barId === barId && e.productId === productId && e.day === currentDay);
+  // !e.day handles legacy entries saved before multi-day support
+  const dayLog = log.filter(e => e.barId === barId && e.productId === productId && (!e.day || e.day === currentDay));
   const reassort = dayLog.filter(e => e.type === 'reassort').reduce((s,e) => s + e.qty, 0);
   const out = dayLog.filter(e => e.type !== 'reassort').reduce((s,e) => {
     return s + (e.unitMode && e.pack > 1 ? e.qty / e.pack : e.qty);
@@ -1555,7 +1556,6 @@ let cfgBars = [], cfgProds = [];
 function openConfig() {
   cfgBars  = BARS.map(b => ({...b}));
   cfgProds = ALL_PRODUCTS.map(p => ({...p, bars:[...p.bars], types:[...(p.types||['reassort','casse','staff','offert'])]}));
-  console.log('[openConfig] BARS:', BARS.length, 'cfgBars:', cfgBars.length, BARS.map(b=>b.id));
   document.getElementById('cfg-event').value = document.getElementById('event-name').textContent;
   renderCfgDays();
   renderCfgBars();
@@ -1767,7 +1767,7 @@ function renderCfgProds() {
 
     const activeBars = cfgBars.length ? cfgBars : BARS;
     activeBars.forEach(bar => {
-      const assigned = p.bars.includes(bar.id);
+      const assigned = (p.bars||[]).includes(bar.id);
       const stockVal = (STOCKS[bar.id] && STOCKS[bar.id][p.id]) || 0;
 
       const row = document.createElement('div');
@@ -1995,16 +1995,16 @@ function addBar() {
   const color = BAR_COLORS.find(c => !usedColors.includes(c)) || BAR_COLORS[cfgBars.length % BAR_COLORS.length];
   cfgBars.push({id: uid(), name:'Nouveau bar', color});
   renderCfgBars();
-  cfgProds.forEach(p => renderProdBarWidgets(p.id));
+  renderCfgProds(); // rebuild product sections so new bar appears in checkboxes
 }
 
 function deleteBar(barId) {
   if (cfgBars.length <= 1) { showToast('Minimum 1 bar requis'); return; }
   if (!confirm('Supprimer ce bar ?')) return;
   cfgBars = cfgBars.filter(b => b.id !== barId);
-  cfgProds.forEach(p => { p.bars = p.bars.filter(id => id !== barId); });
+  cfgProds.forEach(p => { p.bars = (p.bars||[]).filter(id => id !== barId); });
   renderCfgBars();
-  cfgProds.forEach(p => renderProdBarWidgets(p.id));
+  renderCfgProds(); // rebuild product sections so deleted bar disappears
 }
 
 function addProduct() {
@@ -2027,9 +2027,11 @@ function saveConfig() {
   const evName = document.getElementById('cfg-event').value.trim();
   if (evName) document.getElementById('event-name').textContent = evName;
   BARS = cfgBars.map(b => ({...b}));
-  ALL_PRODUCTS = cfgProds.map(p => ({...p, bars:[...p.bars], types:[...(p.types||['reassort','casse','staff','offert'])]}));
+  ALL_PRODUCTS = cfgProds.map(p => ({...p, bars:[...(p.bars||[])], types:[...(p.types||['reassort','casse','staff','offert'])]}));
   BARS.forEach(b => { if (!STOCKS[b.id]) STOCKS[b.id] = {}; });
   if (!BARS.find(b => b.id === currentBar)) currentBar = BARS[0]?.id;
+  // Sync stock changes to DAY_STOCKS so day-switch doesn't revert config edits
+  DAY_STOCKS[currentDay] = JSON.parse(JSON.stringify(STOCKS));
   saveAll();
   document.getElementById('cfg-overlay').classList.remove('open');
   buildDaySelector(); buildBarSelector(); buildProducts();
@@ -2355,35 +2357,38 @@ function confirmFinStep1() {
     const retourQty = parseInt(retourEl?.value || '0', 10) || 0;
     const entameQty = parseInt(entameEl?.value || '0', 10) || 0;
 
+    const bar = BARS.find(b => b.id === currentBar);
     if (retourQty > 0) {
       log.unshift({
         id: `fin-retour-${p.id}-${now}`,
-        barId: currentBar,
-        productId: p.id,
+        barId: currentBar, barName: bar?.name || '',
+        productId: p.id, productName: p.name,
         type: 'retour',
-        qty: retourQty,
+        qty: retourQty, units: retourQty * (p.pack || 1),
         unitMode: false,
         pack: p.pack || 1,
-        ts: now,
+        time: now(), ts: now, day: currentDay,
         userId: CURRENT_USER?.id || '',
-        userName: CURRENT_USER?.name || '',
-        day: currentDay,
+        userDisplay: CURRENT_USER?.displayName || CURRENT_USER?.id || '',
+        userRole: CURRENT_USER?.role || '',
         finEvent: true,
       });
     }
     if (entameQty > 0) {
+      const unitMode = p.pack > 1;
       log.unshift({
         id: `fin-entame-${p.id}-${now+1}`,
-        barId: currentBar,
-        productId: p.id,
+        barId: currentBar, barName: bar?.name || '',
+        productId: p.id, productName: p.name,
         type: 'entame',
-        qty: p.pack > 1 ? entameQty : entameQty,
-        unitMode: p.pack > 1,
+        qty: entameQty,
+        units: unitMode ? entameQty : entameQty * (p.pack || 1),
+        unitMode,
         pack: p.pack || 1,
-        ts: now + 1,
+        time: now(), ts: now + 1, day: currentDay,
         userId: CURRENT_USER?.id || '',
-        userName: CURRENT_USER?.name || '',
-        day: currentDay,
+        userDisplay: CURRENT_USER?.displayName || CURRENT_USER?.id || '',
+        userRole: CURRENT_USER?.role || '',
         finEvent: true,
       });
     }
@@ -2477,9 +2482,12 @@ async function confirmFinStep2() {
   });
 
   inventaires.push(snap);
+
+  // Clore l'événement globalement
+  eventClosed = true;
+  applyEventClosedUI();
   saveAll();
 
-  // Clore l'événement pour ce bar (côté UI)
   document.getElementById('fin-overlay').classList.remove('open');
   showToast('✅ Clôture enregistrée — Session terminée');
 
@@ -2488,9 +2496,10 @@ async function confirmFinStep2() {
     clearSession();
     CURRENT_USER = null;
     document.getElementById('app').style.display = 'none';
-    document.getElementById('login-screen').style.display = 'flex';
     document.getElementById('login-pw').value = '';
     document.getElementById('login-id').value = '';
+    document.getElementById('login-error').textContent = '';
+    document.getElementById('login-screen').classList.add('active');
   }, 1500);
 }
 
@@ -2526,6 +2535,8 @@ async function init() {
   initSwipe();
   initActivityTracking();
   await initAuth();
+  // Ensure fin-event-btn visibility is correct on initial screen
+  goScreen('sorties');
   document.addEventListener('click', e => {
     if (!e.target.closest('.emoji-picker-wrap')) {
       document.querySelectorAll('.emoji-grid').forEach(g => g.classList.remove('open'));
