@@ -1609,18 +1609,33 @@ function renderCfgProds() {
 
     const nameRow = document.createElement('div');
     nameRow.className = 'cfg-prod-namerow';
+    const packBadge = p.pack > 1 ? `carton ×${p.pack}` : 'unité seule';
+    const packBadgeClass = p.pack > 1 ? 'cfg-pack-badge cfg-pack-badge--multi' : 'cfg-pack-badge cfg-pack-badge--unit';
     nameRow.innerHTML = `
-      <input class="cfg-inp-name" data-pid="${p.id}" data-field="name" value="${p.name}" placeholder="Nom">
+      <input class="cfg-inp-name" data-pid="${p.id}" data-field="name" value="${p.name.replace(/"/g,'&quot;')}" placeholder="Nom">
       <div class="cfg-inp-pack-wrap">
-        <span class="cfg-inp-pack-lbl">u./cdt</span>
+        <span class="cfg-inp-pack-lbl" title="Nombre d'unités par carton. Mettre 1 si vendu à l'unité.">cdt</span>
         <input class="cfg-inp-pack" data-pid="${p.id}" data-field="pack" type="number" min="1" value="${p.pack}">
       </div>`;
+    const packHint = document.createElement('div');
+    packHint.className = packBadgeClass;
+    packHint.id = `pack-badge-${p.id}`;
+    packHint.textContent = packBadge;
+    nameRow.appendChild(packHint);
     nameRow.querySelectorAll('input').forEach(inp => {
       inp.addEventListener('input', e => {
         const idx2 = cfgProds.findIndex(x => x.id === e.target.dataset.pid);
         if (idx2 === -1) return;
         if (e.target.dataset.field === 'name') { cfgProds[idx2].name = e.target.value; const t = block.querySelector('.cfg-prod-hdr-title'); if(t) t.textContent = e.target.value; }
-        else cfgProds[idx2].pack = Math.max(1, parseInt(e.target.value)||1);
+        else {
+          const v = Math.max(1, parseInt(e.target.value)||1);
+          cfgProds[idx2].pack = v;
+          const badge = document.getElementById(`pack-badge-${e.target.dataset.pid}`);
+          if (badge) {
+            badge.textContent = v > 1 ? `carton ×${v}` : 'unité seule';
+            badge.className = v > 1 ? 'cfg-pack-badge cfg-pack-badge--multi' : 'cfg-pack-badge cfg-pack-badge--unit';
+          }
+        }
       });
     });
     block.appendChild(nameRow);

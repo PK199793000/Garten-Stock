@@ -170,7 +170,10 @@ html,body{height:100%;background:var(--c-bg);color:var(--c-text);font-family:var
 .cfg-prod-hdr{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
 .cfg-prod-hdr-icon{font-size:20px;}
 .cfg-prod-hdr-title{flex:1;font-size:12px;color:var(--c-muted);font-family:var(--font-mono);}
-.cfg-prod-namerow{display:grid;grid-template-columns:1fr 80px;gap:8px;margin-bottom:8px;}
+.cfg-prod-namerow{display:grid;grid-template-columns:1fr 80px;gap:8px;margin-bottom:4px;}
+.cfg-pack-badge{font-size:10px;font-weight:700;font-family:var(--font-mono);padding:2px 8px;border-radius:10px;text-align:center;margin-bottom:6px;grid-column:1/-1;}
+.cfg-pack-badge--unit{background:rgba(82,196,122,.12);color:#52c47a;}
+.cfg-pack-badge--multi{background:rgba(232,197,71,.12);color:var(--c-accent);}
 .cfg-inp-name{background:var(--c-surface2);border:1px solid var(--c-border2);border-radius:8px;padding:8px 10px;font-size:13px;color:var(--c-text);font-family:var(--font-head);width:100%;}
 .cfg-inp-name:focus{outline:none;border-color:var(--c-accent);}
 .cfg-inp-pack-wrap{display:flex;flex-direction:column;gap:3px;}
