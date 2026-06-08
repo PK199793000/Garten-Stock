@@ -22,7 +22,7 @@ html,body{height:100%;background:var(--c-bg);color:var(--c-text);font-family:var
 .bar-chip{flex-shrink:0;padding:5px 14px;border-radius:20px;border:1px solid var(--c-border2);background:var(--c-surface);font-size:12px;font-weight:600;cursor:pointer;color:var(--c-muted);font-family:var(--font-head);}
 
 /* ── SCREENS ── */
-.screen{display:none;flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--c-border) transparent;}
+.screen{display:none;flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--c-border) transparent;padding-bottom:70px;}
 .screen.active{display:block;}
 .screen::-webkit-scrollbar{width:3px;}
 .screen::-webkit-scrollbar-thumb{background:var(--c-border2);border-radius:2px;}
@@ -287,6 +287,7 @@ html,body{height:100%;background:var(--c-bg);color:var(--c-text);font-family:var
 .pcard--alert{border-color:var(--c-red) !important;}
 .pcard--alert .pcard-stock strong{color:var(--c-red) !important;}
 .stock-alert-badge{display:inline-block;background:var(--c-red);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:10px;margin-left:4px;vertical-align:middle;letter-spacing:.04em;}
+.stock-neg-badge{display:inline-block;background:#7a0000;color:#ff9999;font-size:9px;font-weight:700;padding:1px 5px;border-radius:10px;margin-left:4px;vertical-align:middle;letter-spacing:.04em;}
 
 /* ── LOG DELETE BUTTON ── */
 .log-delete{width:24px;height:24px;border-radius:6px;background:transparent;border:1px solid rgba(224,82,82,.3);color:var(--c-red);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;opacity:0;transition:opacity .15s;}

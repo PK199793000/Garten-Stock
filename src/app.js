@@ -864,13 +864,19 @@ function buildProducts() {
       return `<button class="pact-btn ${t}${canQuickAdd.includes(t)?' pact-lp':''}" onclick='handlePactBtn(${ps},"${t}")' ${lp}>${TYPE_LABELS[t]||t.toUpperCase()}<span class="pact-lp-hint">⚡+1</span></button>`;
     }).join('');
     const alertBadge = isAlert ? '<span class="stock-alert-badge">⚠ BAS</span>' : '';
+    // Stock négatif = anomalie (saisies supérieures au stock dispo)
+    const isNegative = remaining < 0;
+    if (isNegative) sc = '#e05252';
+    const displayRemaining = isNegative
+      ? remaining.toFixed(1)  // affiche la valeur négative en rouge pour alerter
+      : (Number.isInteger(remaining) ? remaining : remaining.toFixed(1));
     const div = document.createElement('div');
-    div.className = 'pcard' + (isAlert ? ' pcard--alert' : '');
+    div.className = 'pcard' + (isAlert || isNegative ? ' pcard--alert' : '');
     div.innerHTML = `
       <div class="pcard-head">
         <div class="pcard-icon">${p.icon}</div>
         <div class="pcard-name"><strong>${p.name}</strong><span>${unitStr} · stock : ${init}</span></div>
-        <div class="pcard-stock"><strong style="color:${sc}">${Number.isInteger(remaining) ? remaining : remaining.toFixed(1)}</strong>restants${alertBadge}</div>
+        <div class="pcard-stock"><strong style="color:${sc}">${displayRemaining}</strong>restants${alertBadge}${isNegative ? '<span class="stock-neg-badge">⚠ NÉGATIF</span>' : ''}</div>
       </div>
       <div class="pcard-actions" style="grid-template-columns:repeat(${ptypes.length},1fr)">${actionBtns}</div>`;
     el.appendChild(div);
