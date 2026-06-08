@@ -502,11 +502,13 @@ function calcStock(barId, productId) {
   const init = (STOCKS[barId] && STOCKS[barId][productId]) || 0;
   // !e.day handles legacy entries saved before multi-day support
   const dayLog = log.filter(e => e.barId === barId && e.productId === productId && (!e.day || e.day === currentDay));
-  const reassort = dayLog.filter(e => e.type === 'reassort').reduce((s,e) => s + e.qty, 0);
-  const out = dayLog.filter(e => e.type !== 'reassort').reduce((s,e) => {
+  // retour = seul type qui RE-AUGMENTE le stock (retour camion)
+  // tout le reste (reassort/sortie bar, casse, staff, offert, entame) DIMINUE le stock
+  const retour = dayLog.filter(e => e.type === 'retour').reduce((s,e) => s + e.qty, 0);
+  const out = dayLog.filter(e => e.type !== 'retour').reduce((s,e) => {
     return s + (e.unitMode && e.pack > 1 ? e.qty / e.pack : e.qty);
   }, 0);
-  return init + reassort - out;
+  return init + retour - out;
 }
 
 // ════════════════════════════════
