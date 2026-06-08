@@ -233,8 +233,10 @@ html,body{height:100%;background:var(--c-bg);color:var(--c-text);font-family:var
 .login-error{font-size:12px;color:var(--c-red);text-align:center;margin-top:10px;min-height:18px;font-family:var(--font-mono);}
 
 /* ── USER BADGE (topbar) ── */
-.user-badge{font-size:11px;font-family:var(--font-mono);color:var(--c-muted);cursor:pointer;padding:3px 8px;border-radius:20px;border:1px solid var(--c-border2);white-space:nowrap;}
-.user-badge:hover{border-color:var(--c-border);}
+.user-badge{font-size:11px;font-family:var(--font-mono);color:var(--c-muted);padding:3px 8px;border-radius:20px;border:1px solid var(--c-border2);white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis;}
+.logout-btn{background:transparent;border:1px solid var(--c-border2);border-radius:8px;color:var(--c-muted);font-size:15px;padding:3px 7px;cursor:pointer;line-height:1;transition:border-color .15s,color .15s;}
+.logout-btn:hover{border-color:var(--c-red);color:var(--c-red);}
+.logout-btn:active{background:rgba(224,82,82,.1);}
 
 /* ── USER MANAGEMENT (config) ── */
 .cfg-user-item{display:flex;align-items:center;gap:8px;background:var(--c-surface);border:1px solid var(--c-border);border-radius:10px;padding:10px 12px;margin-bottom:8px;}

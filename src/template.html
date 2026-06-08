@@ -83,7 +83,8 @@
       <div class="day-selector" id="day-selector"></div>
       <div class="topbar-clock" id="clock">--:--</div>
       <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="Changer le thème">🌙</button>
-      <div class="user-badge" id="user-badge" onclick="doLogout()" title="Se déconnecter"></div>
+      <div class="user-badge" id="user-badge"></div>
+      <button class="logout-btn" onclick="doLogout()" title="Se déconnecter">🚪</button>
     </div>
   </div>
   <div class="bar-selector" id="bar-selector"></div>
@@ -112,7 +113,8 @@
   <div class="screen" id="screen-recap">
     <div id="recap-content"></div>
     <div class="export-row">
-      <button class="export-btn" onclick="exportCSV()">↓ CSV complet</button>
+      <button class="export-btn" onclick="exportCSV()">↓ CSV log</button>
+      <button class="export-btn export-btn-recap" onclick="exportRecapCSV()">📊 CSV récap</button>
       <button class="export-btn export-btn-print" onclick="printRecap()">🖨 Imprimer PDF</button>
     </div>
   </div>
