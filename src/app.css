@@ -188,8 +188,10 @@ html,body{height:100%;background:var(--c-bg);color:var(--c-text);font-family:var
 .cfg-bars-assign{margin-top:10px;padding-top:10px;border-top:1px solid var(--c-border);}
 .cfg-bars-assign-lbl{font-size:10px;color:var(--c-muted);font-family:var(--font-mono);margin-bottom:6px;}
 .cfg-bars-checks{display:flex;flex-wrap:wrap;gap:6px;}
-.cfg-bar-check{display:flex;align-items:center;gap:5px;padding:4px 9px;border-radius:20px;border:1px solid var(--c-border2);background:var(--c-surface2);cursor:pointer;font-size:11px;font-weight:600;}
+.cfg-bar-check{display:flex;align-items:center;gap:5px;padding:4px 9px;border-radius:20px;border:1px solid var(--c-border2);background:var(--c-surface2);cursor:pointer;font-size:11px;font-weight:600;flex:1;min-width:100px;}
 .cfg-bar-check input{accent-color:var(--c-accent);width:13px;height:13px;}
+.cfg-bar-stock-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.cfg-bar-stock-inp{width:72px;flex-shrink:0;}
 
 .cfg-close-btn{width:100%;padding:14px;background:var(--c-accent);color:#000;border:none;border-radius:10px;font-family:var(--font-head);font-size:14px;font-weight:700;cursor:pointer;margin-top:8px;}
 

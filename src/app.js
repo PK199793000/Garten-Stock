@@ -1760,51 +1760,64 @@ function renderCfgProds() {
     typesWrap.appendChild(typesRow);
     block.appendChild(typesWrap);
 
-    const hint = document.createElement('div');
-    hint.className = 'cfg-stocks-hint';
-    hint.style.marginTop = '10px';
-    hint.textContent = 'Stock de départ par bar (en conditionnements) :';
-    block.appendChild(hint);
+    // ── Bars + stock de départ (une ligne par bar) ──
+    const barsSection = document.createElement('div');
+    barsSection.className = 'cfg-bars-assign';
+    barsSection.innerHTML = '<div class="cfg-bars-assign-lbl">Bars concernés &amp; stock de départ :</div>';
 
-    const stockGrid = document.createElement('div');
-    stockGrid.className = 'cfg-stock-grid';
-    stockGrid.id = 'sgrid-' + p.id;
-    block.appendChild(stockGrid);
-
-    const assignWrap = document.createElement('div');
-    assignWrap.className = 'cfg-bars-assign';
-    assignWrap.innerHTML = '<div class="cfg-bars-assign-lbl">Bars concernés :</div>';
-    const checksRow = document.createElement('div');
-    checksRow.className = 'cfg-bars-checks';
-    checksRow.id = 'bchecks-' + p.id;
-    // Build bar checkboxes inline — use BARS as fallback if cfgBars not ready
     const activeBars = cfgBars.length ? cfgBars : BARS;
     activeBars.forEach(bar => {
-      const checked = p.bars.includes(bar.id);
+      const assigned = p.bars.includes(bar.id);
+      const stockVal = (STOCKS[bar.id] && STOCKS[bar.id][p.id]) || 0;
+
+      const row = document.createElement('div');
+      row.className = 'cfg-bar-stock-row';
+
       const lbl = document.createElement('label');
-      lbl.className = 'cfg-bar-check';
-      lbl.style.borderColor = checked ? bar.color : '';
+      lbl.className = 'cfg-bar-check' + (assigned ? ' assigned' : '');
+      lbl.style.borderColor = assigned ? bar.color : '';
+
       const cb = document.createElement('input');
-      cb.type = 'checkbox'; cb.dataset.pid = p.id; cb.dataset.bid = bar.id;
-      if (checked) cb.checked = true;
-      const span = document.createElement('span');
-      span.textContent = bar.name; span.style.color = bar.color;
-      lbl.appendChild(cb); lbl.appendChild(span);
-      cb.addEventListener('change', e => {
-        const pidx = cfgProds.findIndex(x => x.id === e.target.dataset.pid);
-        const bid  = e.target.dataset.bid;
-        if (e.target.checked) { if (!cfgProds[pidx].bars.includes(bid)) cfgProds[pidx].bars.push(bid); }
-        else cfgProds[pidx].bars = cfgProds[pidx].bars.filter(x => x !== bid);
-        lbl.style.borderColor = e.target.checked ? bar.color : '';
-        renderStockGrid(p.id);
+      cb.type = 'checkbox'; cb.checked = assigned;
+
+      const nameSpan = document.createElement('span');
+      nameSpan.textContent = bar.name; nameSpan.style.color = bar.color;
+
+      lbl.appendChild(cb); lbl.appendChild(nameSpan);
+
+      const stockInp = document.createElement('input');
+      stockInp.type = 'number'; stockInp.min = '0'; stockInp.value = stockVal;
+      stockInp.className = 'cfg-inp-stock cfg-bar-stock-inp';
+      stockInp.placeholder = '0';
+      stockInp.style.display = assigned ? '' : 'none';
+      stockInp.title = 'Stock de départ (conditionnements)';
+
+      cb.addEventListener('change', () => {
+        const pidx = cfgProds.findIndex(x => x.id === p.id);
+        if (cb.checked) {
+          if (!cfgProds[pidx].bars.includes(bar.id)) cfgProds[pidx].bars.push(bar.id);
+          stockInp.style.display = '';
+          lbl.style.borderColor = bar.color;
+        } else {
+          cfgProds[pidx].bars = cfgProds[pidx].bars.filter(x => x !== bar.id);
+          stockInp.style.display = 'none';
+          lbl.style.borderColor = '';
+        }
       });
-      checksRow.appendChild(lbl);
+
+      stockInp.addEventListener('input', () => {
+        if (!STOCKS[bar.id]) STOCKS[bar.id] = {};
+        STOCKS[bar.id][p.id] = parseInt(stockInp.value) || 0;
+      });
+
+      row.appendChild(lbl);
+      row.appendChild(stockInp);
+      barsSection.appendChild(row);
     });
-    assignWrap.appendChild(checksRow);
-    block.appendChild(assignWrap);
+
+    block.appendChild(barsSection);
 
     el.appendChild(block);
-    renderStockGrid(p.id);
   });
 }
 
