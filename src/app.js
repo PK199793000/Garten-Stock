@@ -1776,11 +1776,33 @@ function renderCfgProds() {
     const checksRow = document.createElement('div');
     checksRow.className = 'cfg-bars-checks';
     checksRow.id = 'bchecks-' + p.id;
+    // Build bar checkboxes inline (direct DOM ref, no getElementById)
+    cfgBars.forEach(bar => {
+      const checked = p.bars.includes(bar.id);
+      const lbl = document.createElement('label');
+      lbl.className = 'cfg-bar-check';
+      lbl.style.borderColor = checked ? bar.color : '';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox'; cb.dataset.pid = p.id; cb.dataset.bid = bar.id;
+      if (checked) cb.checked = true;
+      const span = document.createElement('span');
+      span.textContent = bar.name; span.style.color = bar.color;
+      lbl.appendChild(cb); lbl.appendChild(span);
+      cb.addEventListener('change', e => {
+        const pidx = cfgProds.findIndex(x => x.id === e.target.dataset.pid);
+        const bid  = e.target.dataset.bid;
+        if (e.target.checked) { if (!cfgProds[pidx].bars.includes(bid)) cfgProds[pidx].bars.push(bid); }
+        else cfgProds[pidx].bars = cfgProds[pidx].bars.filter(x => x !== bid);
+        lbl.style.borderColor = e.target.checked ? bar.color : '';
+        renderStockGrid(p.id);
+      });
+      checksRow.appendChild(lbl);
+    });
     assignWrap.appendChild(checksRow);
     block.appendChild(assignWrap);
 
     el.appendChild(block);
-    renderProdBarWidgets(p.id);
+    renderStockGrid(p.id);
   });
 }
 
@@ -1798,6 +1820,7 @@ function selectEmoji(pid, emoji) {
 }
 
 function renderProdBarWidgets(pid) {
+  // Used when bars list changes (add/delete bar) — rebuild checkboxes + stock grid
   const p = cfgProds.find(x => x.id === pid);
   if (!p) return;
   const checksRow = document.getElementById('bchecks-'+pid);
@@ -1808,8 +1831,13 @@ function renderProdBarWidgets(pid) {
       const lbl = document.createElement('label');
       lbl.className = 'cfg-bar-check';
       lbl.style.borderColor = checked ? bar.color : '';
-      lbl.innerHTML = `<input type="checkbox" data-pid="${pid}" data-bid="${bar.id}" ${checked?'checked':''}><span class="cfg-bar-chk-lbl-${bar.id}" style="color:${bar.color}">${bar.name}</span>`;
-      lbl.querySelector('input').addEventListener('change', e => {
+      const cb = document.createElement('input');
+      cb.type = 'checkbox'; cb.dataset.pid = pid; cb.dataset.bid = bar.id;
+      if (checked) cb.checked = true;
+      const span = document.createElement('span');
+      span.textContent = bar.name; span.style.color = bar.color;
+      lbl.appendChild(cb); lbl.appendChild(span);
+      cb.addEventListener('change', e => {
         const pidx = cfgProds.findIndex(x => x.id === e.target.dataset.pid);
         const bid  = e.target.dataset.bid;
         if (e.target.checked) { if (!cfgProds[pidx].bars.includes(bid)) cfgProds[pidx].bars.push(bid); }
