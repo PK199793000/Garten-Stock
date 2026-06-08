@@ -2457,6 +2457,9 @@ function goScreen(name) {
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('screen-'+name).classList.add('active');
   document.getElementById('nav-'+name).classList.add('active');
+  // Fin d'événement button only on sorties screen
+  const finBtn = document.getElementById('fin-event-btn');
+  if (finBtn) finBtn.style.display = name === 'sorties' ? '' : 'none';
   if (name === 'log')     buildLog();
   if (name === 'recap')   buildRecap();
   if (name === 'history') loadHistory();

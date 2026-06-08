@@ -96,10 +96,6 @@
       <span class="section-action" onclick="requestConfig()">⚙ Configurer</span>
     </div>
     <div class="product-list" id="product-list"></div>
-    <div class="fin-event-bar" id="fin-event-bar">
-      <button class="fin-event-btn" onclick="openFinEvent()">🏁 Fin d'événement</button>
-      <button class="logout-bar-btn" onclick="doLogout()">🚪 Déconnexion</button>
-    </div>
   </div>
 
   <div class="screen" id="screen-log">
@@ -124,6 +120,11 @@
       <span class="section-title">Autres événements</span>
     </div>
     <div id="history-content" style="padding:0 16px 80px;"></div>
+  </div>
+
+  <div class="fin-event-bar" id="fin-event-bar">
+    <button class="fin-event-btn" id="fin-event-btn" onclick="openFinEvent()">🏁 Fin d'événement</button>
+    <button class="logout-bar-btn" onclick="doLogout()">🚪 Déconnexion</button>
   </div>
 
   <div class="navbar">
