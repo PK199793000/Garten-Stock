@@ -599,6 +599,26 @@ function saveVentes(barId, productId, val) {
   const v = parseFloat(val);
   ventesCaisse[barId][productId] = isNaN(v) ? null : v;
   saveAll();
+  _updateReconRow(barId, productId);
+}
+
+function _updateReconRow(barId, productId) {
+  const p = ALL_PRODUCTS.find(x => x.id === productId);
+  if (!p) return;
+  const r = calcReconProduct(barId, p);
+  if (!r) return;
+  const ecartCell = document.getElementById(`recon-ecart-${barId}-${productId}`);
+  if (ecartCell) {
+    const ecartClass = r.ecartQty === null ? '' : r.ecartQty > 0 ? 'recon-pos' : r.ecartQty < 0 ? 'recon-neg' : 'recon-zero';
+    const ecartStr = r.ecartQty === null ? '—'
+      : `${r.ecartQty > 0 ? '+' : ''}${r.ecartQty} (${r.ecartPct > 0 ? '+' : ''}${r.ecartPct}%)`;
+    ecartCell.className = `recon-num ${ecartClass}`;
+    ecartCell.textContent = ecartStr;
+  }
+  const clReelSpan = document.getElementById(`recon-clreel-${barId}-${productId}`);
+  if (clReelSpan) {
+    clReelSpan.textContent = r.clReel !== null ? `= ${r.clReel} cL` : '';
+  }
 }
 
 function getBarProducts(barId) {
@@ -1337,10 +1357,10 @@ function buildRecap() {
         const inputOrVal = isDir
           ? `<input class="recon-ventes-input" type="number" min="0" step="1"
                value="${r.ventesQty !== null ? r.ventesQty : ''}" placeholder="?"
-               onchange="saveVentes('${bar.id}','${p.id}',this.value);">`
+               oninput="saveVentes('${bar.id}','${p.id}',this.value);">`
           : (r.ventesQty !== null ? `<strong>${r.ventesQty}</strong>` : '<span style="color:var(--c-muted)">—</span>');
 
-        const clReelStr = r.clReel !== null ? `<span class="recon-cl-hint">= ${r.clReel} cL</span>` : '';
+        const clReelStr = r.clReel !== null ? `<span class="recon-cl-hint" id="recon-clreel-${bar.id}-${p.id}">= ${r.clReel} cL</span>` : `<span class="recon-cl-hint" id="recon-clreel-${bar.id}-${p.id}"></span>`;
 
         return `<tr>
           <td>
@@ -1357,13 +1377,13 @@ function buildRecap() {
           <td class="recon-ventes-cell">${inputOrVal}${clReelStr}
             <div class="recon-unit-lbl">${unitLabel}</div>
           </td>
-          <td class="recon-num ${ecartClass}">${ecartStr}</td>
+          <td class="recon-num ${ecartClass}" id="recon-ecart-${bar.id}-${p.id}">${ecartStr}</td>
         </tr>`;
       }).filter(Boolean).join('');
 
+      const reconSec = document.createElement('div');
+      reconSec.className = 'recon-section';
       if (reconRows) {
-        const reconSec = document.createElement('div');
-        reconSec.className = 'recon-section';
         reconSec.innerHTML = `
           <div class="recon-title">📊 Réconciliation caisse / stock</div>
           <div class="recon-legend">
@@ -1379,8 +1399,12 @@ function buildRecap() {
               <tbody>${reconRows}</tbody>
             </table>
           </div>`;
-        sec.appendChild(reconSec);
+      } else {
+        reconSec.innerHTML = `
+          <div class="recon-title">📊 Réconciliation caisse / stock</div>
+          <div class="recon-empty">Aucune sortie enregistrée pour ce bar — la réconciliation sera disponible après le premier mouvement.</div>`;
       }
+      sec.appendChild(reconSec);
     }
   });
 
@@ -2060,6 +2084,65 @@ function exportCSV() {
   showToast('Export CSV téléchargé');
 }
 
+function exportRecapCSV() {
+  const evName = document.getElementById('event-name').textContent;
+  const date   = new Date().toISOString().slice(0,10);
+  const dayStr = currentDay.toUpperCase();
+
+  let csv = '﻿';
+
+  // ── Section réconciliation ──
+  csv += `--- RÉCONCILIATION CAISSE / STOCK · ${evName} · ${dayStr} ---\n`;
+  csv += 'Bar,Produit,Mode vente,cL/dose,Sorti camion (cL),Pertes (cL),Dispo (cL),Théorique,Ventes POS,Écart,Écart %\n';
+
+  let hasRecon = false;
+  BARS.forEach(bar => {
+    const prods = ALL_PRODUCTS.filter(p => p.bars.includes(bar.id) && p.unitCl);
+    prods.forEach(p => {
+      const r = calcReconProduct(bar.id, p);
+      if (!r || r.clSorti === 0) return;
+      hasRecon = true;
+      const modeLabel = r.salesMode === 'unit' ? 'À l\'unité' : 'À la portion';
+      const theoLabel = r.salesMode === 'unit' ? `${r.theoQty} unités` : `${r.theoQty} portions`;
+      const ventesLabel = r.ventesQty !== null ? (r.salesMode === 'unit' ? `${r.ventesQty} unités` : `${r.ventesQty} portions`) : '';
+      const ecartLabel = r.ecartQty !== null ? (r.ecartQty > 0 ? `+${r.ecartQty}` : `${r.ecartQty}`) : '';
+      const ecartPctLabel = r.ecartPct !== null ? (r.ecartPct > 0 ? `+${r.ecartPct}%` : `${r.ecartPct}%`) : '';
+      csv += `"${bar.name}","${p.name}","${modeLabel}",${r.portionCl},${r.clSorti},${r.clPertes},${r.clDispo},"${theoLabel}","${ventesLabel}","${ecartLabel}","${ecartPctLabel}"\n`;
+    });
+  });
+
+  if (!hasRecon) {
+    csv += 'Aucune donnée de réconciliation disponible\n';
+  }
+
+  // ── Section inventaires fin d'événement ──
+  const finInvs = inventaires.filter(i => i.day === currentDay && i.finEvent);
+  if (finInvs.length) {
+    csv += `\n--- INVENTAIRES FIN D'ÉVÉNEMENT · ${dayStr} ---\n`;
+    csv += 'Bar,Heure,Produit,Théorique,Physique,Écart\n';
+    finInvs.forEach(inv => {
+      const bar = BARS.find(b => b.id === inv.barId);
+      const time = new Date(inv.ts).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+      Object.entries(inv.counts || {}).forEach(([pid, physical]) => {
+        const p = ALL_PRODUCTS.find(x => x.id === pid);
+        if (!p) return;
+        const theo = calcStock(inv.barId, pid);
+        const delta = Math.round((physical - theo) * 10) / 10;
+        csv += `"${bar?.name||inv.barId}","${time}","${p.name}",${theo},${physical},${delta > 0 ? '+'+delta : delta}\n`;
+      });
+    });
+  }
+
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = 'gartenstock_recap_' + evName.replace(/[^a-zA-Z0-9]/g,'_') + '_' + dayStr + '_' + date + '.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('CSV récap téléchargé');
+}
+
 // ════════════════════════════════
 //  HISTORIQUE INTER-EVENTS
 // ════════════════════════════════
@@ -2300,8 +2383,38 @@ function _buildFinStep2() {
 }
 
 async function confirmFinStep2() {
-  // Sauvegarder l'inventaire physique
+  // ── Checklist validation ──
   const barProds = ALL_PRODUCTS.filter(p => p.bars.includes(currentBar));
+  const warnings = [];
+
+  // Check: ventes POS saisies ?
+  const prodsWithConv = barProds.filter(p => p.unitCl);
+  const missingVentes = prodsWithConv.filter(p => {
+    const raw = ventesCaisse[currentBar]?.[p.id];
+    return typeof raw !== 'number';
+  });
+  if (missingVentes.length > 0) {
+    warnings.push(`⚠ Ventes POS non saisies pour : ${missingVentes.map(p=>p.name).join(', ')}`);
+  }
+
+  // Check: inventaire physique différent du théorique ?
+  const bigDiffs = barProds.filter(p => {
+    const el = document.getElementById(`fin-inv-${p.id}`);
+    if (!el) return false;
+    const physical = parseFloat(el.value);
+    const theo = calcStock(currentBar, p.id);
+    return !isNaN(physical) && Math.abs(physical - theo) > 0.5;
+  });
+  if (bigDiffs.length > 0) {
+    warnings.push(`📋 Écarts d'inventaire sur : ${bigDiffs.map(p=>p.name).join(', ')}`);
+  }
+
+  if (warnings.length > 0) {
+    const msg = `Clôturer l'événement ?\n\n${warnings.join('\n')}\n\nCes points resteront dans le rapport. Confirmer ?`;
+    if (!confirm(msg)) return;
+  }
+
+  // Sauvegarder l'inventaire physique
   const snap = {
     id: `fin-inv-${currentBar}-${Date.now()}`,
     barId: currentBar,

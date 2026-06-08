@@ -367,6 +367,7 @@ html,body{height:100%;background:var(--c-bg);color:var(--c-text);font-family:var
 .recon-title{font-family:var(--font-head);font-size:13px;font-weight:700;letter-spacing:.07em;padding:12px 14px 4px;color:var(--c-accent);}
 .recon-legend{font-size:11px;color:var(--c-muted);padding:0 14px 10px;line-height:1.5;}
 .recon-legend strong{color:var(--c-text);}
+.recon-empty{font-size:12px;color:var(--c-muted);padding:10px 14px 14px;font-style:italic;}
 .recon-table-wrap{overflow-x:auto;}
 .recon-table{width:100%;border-collapse:collapse;font-size:12px;}
 .recon-table th{background:var(--c-surface2);font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--c-muted);padding:8px 10px;text-align:left;white-space:nowrap;border-bottom:1px solid var(--c-border2);}
