@@ -156,8 +156,11 @@ html,body{height:100%;background:var(--c-bg);color:var(--c-text);font-family:var
 /* bar rows */
 .cfg-bar-item{display:flex;align-items:center;gap:8px;background:var(--c-surface);border:1px solid var(--c-border);border-radius:10px;padding:10px 12px;margin-bottom:8px;}
 .cfg-bar-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
-.cfg-inp-barname{flex:1;background:var(--c-surface2);border:1px solid var(--c-border2);border-radius:8px;padding:8px 10px;font-size:14px;font-weight:700;color:var(--c-text);font-family:var(--font-head);}
+.cfg-inp-barname{flex:1;min-width:0;background:var(--c-surface2);border:1px solid var(--c-border2);border-radius:8px;padding:8px 10px;font-size:14px;font-weight:700;color:var(--c-text);font-family:var(--font-head);}
 .cfg-inp-barname:focus{outline:none;border-color:var(--c-accent);}
+.cfg-bar-type-toggle{display:flex;background:var(--c-surface2);border-radius:8px;overflow:hidden;border:1px solid var(--c-border2);flex-shrink:0;}
+.cfg-bar-type-btn{background:transparent;border:none;padding:5px 9px;font-size:10px;color:var(--c-muted);cursor:pointer;font-family:var(--font-mono);white-space:nowrap;transition:all .15s;}
+.cfg-bar-type-btn.active{background:var(--c-accent);color:#000;font-weight:700;}
 .cfg-del-btn{width:32px;height:32px;border-radius:8px;background:rgba(224,82,82,.12);border:1px solid rgba(224,82,82,.25);color:var(--c-red);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .cfg-del-btn:active{background:rgba(224,82,82,.25);}
 

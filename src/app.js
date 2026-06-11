@@ -663,11 +663,16 @@ function migrateProduct(p) {
   return out;
 }
 
+function migrateBar(b) {
+  if (b.type) return b;
+  return { ...b, type: 'bar' };
+}
+
 window._fbApply = function(data) {
   let changed = false;
-  if (data.log)      { log = data.log;              changed = true; }
-  if (data.STOCKS)   { STOCKS = data.STOCKS;         changed = true; }
-  if (data.BARS)     { BARS = data.BARS;             changed = true; }
+  if (data.log)      { log = data.log;                              changed = true; }
+  if (data.STOCKS)   { STOCKS = data.STOCKS;                        changed = true; }
+  if (data.BARS)     { BARS = data.BARS.map(b => migrateBar(b));    changed = true; }
   if (data.PRODUCTS) {
     ALL_PRODUCTS = data.PRODUCTS.map(p => migrateProduct(p));
     changed = true;
@@ -934,10 +939,14 @@ function buildProducts() {
     else if (pct > .6) sc = '#e87a3a';
     const unitStr = p.pack > 1 ? 'pack ×'+p.pack : (p.liters ? p.liters+'L / unité' : 'unité');
     const ps = JSON.stringify(p).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-    const userAllowed = CURRENT_USER?.allowedTypes || ['reassort','casse','staff','offert'];
-    const ptypes = (p.types || ['reassort','casse','staff','offert']).filter(t => userAllowed.includes(t));
-    const TYPE_LABELS = TYPE_DISPLAY;
-    const canQuickAdd = ['reassort','staff'];
+    const isMerchBar = BARS.find(b => b.id === currentBar)?.type === 'merch';
+    const MERCH_ALLOWED = ['reassort','retour','casse','offert'];
+    const userAllowed = CURRENT_USER?.allowedTypes
+      ? (isMerchBar ? CURRENT_USER.allowedTypes.filter(t => MERCH_ALLOWED.includes(t)) : CURRENT_USER.allowedTypes)
+      : (isMerchBar ? MERCH_ALLOWED : ['reassort','casse','staff','offert']);
+    const ptypes = (p.types || (isMerchBar ? MERCH_ALLOWED : ['reassort','casse','staff','offert'])).filter(t => userAllowed.includes(t));
+    const TYPE_LABELS = isMerchBar ? { ...TYPE_DISPLAY, reassort: 'VENTE' } : TYPE_DISPLAY;
+    const canQuickAdd = isMerchBar ? ['reassort'] : ['reassort','staff'];
     const actionBtns = ptypes.map(t => {
       const lp = canQuickAdd.includes(t)
         ? `onmousedown='startLongPress(${ps},"${t}")' onmouseup='cancelLongPress()' onmouseleave='cancelLongPress()' ontouchstart='startLongPress(${ps},"${t}");event.preventDefault();' ontouchend='cancelLongPress();'`
@@ -1285,6 +1294,47 @@ function buildRecap() {
     const bLog = activeLog.filter(e => e.barId === bar.id);
     if (!bLog.length) return;
     hasData = true;
+
+    // ── MERCH BAR : vue simplifiée ──
+    if (bar.type === 'merch') {
+      const tv  = bLog.filter(e=>e.type==='reassort').reduce((s,e)=>s+e.qty,0);
+      const trt = bLog.filter(e=>e.type==='retour').reduce((s,e)=>s+e.qty,0);
+      const tc  = bLog.filter(e=>e.type==='casse').reduce((s,e)=>s+e.qty,0);
+      const to  = bLog.filter(e=>e.type==='offert').reduce((s,e)=>s+e.qty,0);
+      const barProds = ALL_PRODUCTS.filter(p => (p.bars||[]).includes(bar.id));
+      const mRows = barProds.map(p => {
+        const remaining = calcStock(bar.id, p.id);
+        const init = (STOCKS[bar.id] && STOCKS[bar.id][p.id]) || 0;
+        const plog = bLog.filter(e => e.productId === p.id);
+        const ventes = plog.filter(e=>e.type==='reassort').reduce((s,e)=>s+e.qty,0);
+        const retour = plog.filter(e=>e.type==='retour').reduce((s,e)=>s+e.qty,0);
+        const casse  = plog.filter(e=>e.type==='casse').reduce((s,e)=>s+e.qty,0);
+        const offert = plog.filter(e=>e.type==='offert').reduce((s,e)=>s+e.qty,0);
+        const sc = remaining <= 0 ? 'color:var(--c-red)' : remaining <= (p.alertSeuil ?? 2) ? 'color:var(--c-orange)' : 'color:var(--c-green)';
+        return `<tr>
+          <td>${p.icon} ${p.name}</td>
+          <td style="color:var(--c-accent)">${ventes||'—'}</td>
+          <td style="color:#5bc4c4">${retour||'—'}</td>
+          <td style="color:var(--c-red)">${casse||'—'}</td>
+          <td style="color:var(--c-purple)">${offert||'—'}</td>
+          <td style="color:var(--c-muted)">${init}</td>
+          <td><strong style="${sc}">${Number.isInteger(remaining)?remaining:remaining.toFixed(1)}</strong></td>
+        </tr>`;
+      }).join('');
+      const mSec = document.createElement('div');
+      mSec.className = 'recap-bar-section';
+      mSec.innerHTML = `
+        <div class="recap-bar-title" style="color:${bar.color}">${bar.name} <span style="font-size:10px;background:rgba(232,197,71,.15);color:var(--c-accent);border-radius:6px;padding:2px 7px;margin-left:6px;font-weight:600;">MERCH</span></div>
+        <div class="kpi-row">
+          <div class="kpi"><div class="kpi-label">Ventes</div><div class="kpi-val yellow">${tv}</div></div>
+          <div class="kpi"><div class="kpi-label">Retours</div><div class="kpi-val teal">${trt}</div></div>
+          <div class="kpi"><div class="kpi-label">Casse</div><div class="kpi-val red">${tc}</div></div>
+          <div class="kpi"><div class="kpi-label">Offerts</div><div class="kpi-val purple">${to}</div></div>
+        </div>
+        <table class="rtable"><thead><tr><th>Produit</th><th>Ventes</th><th>Retour</th><th>Casse</th><th>Offert</th><th>Init</th><th>Restant</th></tr></thead><tbody>${mRows}</tbody></table>`;
+      el.appendChild(mSec);
+      return;
+    }
 
     const tr  = bLog.filter(e=>e.type==='reassort').reduce((s,e)=>s+e.units,0);
     const tc  = bLog.filter(e=>e.type==='casse').reduce((s,e)=>s+e.units,0);
@@ -1638,11 +1688,22 @@ function renderCfgBars() {
   cfgBars.forEach((bar, idx) => {
     const row = document.createElement('div');
     row.className = 'cfg-bar-item';
+    const isMerch = bar.type === 'merch';
     row.innerHTML = `
       <div class="cfg-bar-dot" style="background:${bar.color}"></div>
-      <input class="cfg-inp-barname" data-idx="${idx}" value="${bar.name}" placeholder="Nom du bar">
+      <input class="cfg-inp-barname" data-idx="${idx}" value="${bar.name.replace(/"/g,'&quot;')}" placeholder="Nom du bar">
+      <div class="cfg-bar-type-toggle">
+        <button class="cfg-bar-type-btn${!isMerch?' active':''}" data-bid="${bar.id}" data-type="bar">🍺 Bar</button>
+        <button class="cfg-bar-type-btn${isMerch?' active':''}" data-bid="${bar.id}" data-type="merch">👕 Merch</button>
+      </div>
       <button class="cfg-del-btn" onclick="deleteBar('${bar.id}')" title="Supprimer ce bar">✕</button>`;
     row.querySelector('input').addEventListener('input', e => { cfgBars[idx].name = e.target.value; refreshProdBarLabels(); });
+    row.querySelectorAll('.cfg-bar-type-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        cfgBars[idx].type = btn.dataset.type;
+        row.querySelectorAll('.cfg-bar-type-btn').forEach(b => b.classList.toggle('active', b.dataset.type === btn.dataset.type));
+      });
+    });
     el.appendChild(row);
   });
 }
@@ -2076,7 +2137,7 @@ function saveInventaire() {
 function addBar() {
   const usedColors = cfgBars.map(b => b.color);
   const color = BAR_COLORS.find(c => !usedColors.includes(c)) || BAR_COLORS[cfgBars.length % BAR_COLORS.length];
-  cfgBars.push({id: uid(), name:'Nouveau bar', color});
+  cfgBars.push({id: uid(), name:'Nouveau bar', color, type:'bar'});
   renderCfgBars();
   renderCfgProds(); // rebuild product sections so new bar appears in checkboxes
 }
