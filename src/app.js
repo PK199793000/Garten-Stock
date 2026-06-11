@@ -2239,7 +2239,7 @@ function exportCSV() {
 
   let csv = '\uFEFF';
   csv += `--- COMPARATIF STOCK vs SORTIES/VENTES${dayStr} ---\n`;
-  csv += 'Événement,Jour,Bar,Produit,Stock départ (cdt),Stock départ (unités),Sorties/Ventes (cdt),Sorties/Ventes (unités),Casse (unités),Staff (unités),Offert (unités),Retour (unités),Entamé perdu (unités),Total sorti (unités)\n';
+  csv += 'Événement,Jour,Point de vente,Produit,Stock départ (cdt),Stock départ (unités),Sorties camion (cdt),Sorties camion (unités),Casse (unités),Staff (unités),Offert (unités),Retour (unités),Entamé perdu (unités),Total sorti (unités)\n';
 
   BARS.forEach(bar => {
     const barLog = activeLog.filter(e => e.barId === bar.id);
@@ -2264,7 +2264,7 @@ function exportCSV() {
   });
 
   csv += '\n--- JOURNAL DÉTAILLÉ (chronologique) ---\n';
-  csv += 'Événement,Jour,Heure,Utilisateur,Rôle,Bar,Produit,Unités/cdt,Quantité (cdt),Unités,Type\n';
+  csv += 'Événement,Jour,Heure,Utilisateur,Rôle,Point de vente,Produit,Unités/cdt,Quantité (cdt),Unités,Type\n';
   [...activeLog].reverse().forEach(e => {
     csv += `"${evName}","${(e.day||'j1').toUpperCase()}",${e.time},"${e.userDisplay||''}","${e.userRole||''}","${e.barName}","${e.productName}",${e.pack},${e.qty},${e.units},${e.type}\n`;
   });
@@ -2289,7 +2289,7 @@ function exportRecapCSV() {
 
   // ── Section réconciliation ──
   csv += `--- RÉCONCILIATION CAISSE / STOCK · ${evName} · ${dayStr} ---\n`;
-  csv += 'Bar,Produit,Mode vente,cL/dose,Sorti camion (cL),Pertes (cL),Dispo (cL),Théorique,Ventes POS,Écart,Écart %\n';
+  csv += 'Point de vente,Produit,Mode vente,cL/dose,Sorti camion (cL),Pertes (cL),Dispo (cL),Théorique,Quantité Kappture,Écart,Écart %\n';
 
   let hasRecon = false;
   BARS.forEach(bar => {
@@ -2315,7 +2315,7 @@ function exportRecapCSV() {
   const finInvs = inventaires.filter(i => i.day === currentDay && i.finEvent);
   if (finInvs.length) {
     csv += `\n--- INVENTAIRES FIN D'ÉVÉNEMENT · ${dayStr} ---\n`;
-    csv += 'Bar,Heure,Produit,Théorique,Physique,Écart\n';
+    csv += 'Point de vente,Heure,Produit,Théorique,Physique,Écart\n';
     finInvs.forEach(inv => {
       const bar = BARS.find(b => b.id === inv.barId);
       const time = new Date(inv.ts).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
@@ -2327,6 +2327,27 @@ function exportRecapCSV() {
         csv += `"${bar?.name||inv.barId}","${time}","${p.name}",${theo},${physical},${delta > 0 ? '+'+delta : delta}\n`;
       });
     });
+  }
+
+  // ── Section croisement Kappture (boissons) ──
+  const barBars = BARS.filter(b => (b.type || 'bar') === 'bar');
+  if (barBars.length) {
+    csv += `\n--- CROISEMENT KAPPTURE · ${evName} · ${dayStr} ---\n`;
+    csv += 'Point de vente,Produit,Sorties camion (unités),Quantité Kappture\n';
+    let hasKap = false;
+    barBars.forEach(bar => {
+      const barLog = activeLog.filter(e => e.barId === bar.id);
+      const prodIds = [...new Set(barLog.map(e => e.productId))];
+      prodIds.forEach(pid => {
+        const pLog = barLog.filter(e => e.productId === pid);
+        const pName = pLog[0].productName;
+        const sortiesU = pLog.filter(e=>e.type==='reassort').reduce((s,e)=>s+e.units,0);
+        if (!sortiesU) return;
+        hasKap = true;
+        csv += `"${bar.name}","${pName}",${sortiesU},\n`;
+      });
+    });
+    if (!hasKap) csv += 'Aucune sortie camion enregistrée\n';
   }
 
   // ── Section merch ──
