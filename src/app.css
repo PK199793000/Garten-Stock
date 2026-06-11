@@ -223,10 +223,12 @@ html,body{height:100%;background:var(--c-bg);color:var(--c-text);font-family:var
 .cfg-type-check.t-casse{accent-color:var(--c-red);}
 .cfg-type-check.t-staff{accent-color:var(--c-green);}
 .cfg-type-check.t-offert{accent-color:var(--c-purple);}
+.cfg-type-check.t-retour{accent-color:#5bc4c4;}
 .cfg-type-check.active-reassort{border-color:var(--c-accent);color:var(--c-accent);}
 .cfg-type-check.active-casse{border-color:var(--c-red);color:var(--c-red);}
 .cfg-type-check.active-staff{border-color:var(--c-green);color:var(--c-green);}
 .cfg-type-check.active-offert{border-color:var(--c-purple);color:var(--c-purple);}
+.cfg-type-check.active-retour{border-color:#5bc4c4;color:#5bc4c4;}
 /* ── LOGIN SCREEN ── */
 .login-screen{display:none;position:fixed;inset:0;background:var(--c-bg);z-index:300;flex-direction:column;align-items:center;justify-content:center;padding:24px;}
 .login-screen.active{display:flex;}

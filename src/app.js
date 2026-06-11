@@ -664,10 +664,10 @@ function migrateProduct(p) {
 }
 
 function migrateBar(b) {
-  if (b.type) return b;
-  // Heuristique : un bar dont le nom contient "merch" est de type merch
-  const type = b.name && /merch/i.test(b.name) ? 'merch' : 'bar';
-  return { ...b, type };
+  if (b.type === 'merch') return b;
+  // Heuristique nom : s'applique même si type:'bar' était déjà sauvé
+  if (b.name && /merch/i.test(b.name)) return { ...b, type: 'merch' };
+  return b.type ? b : { ...b, type: 'bar' };
 }
 
 window._fbApply = function(data) {
@@ -686,13 +686,15 @@ window._fbApply = function(data) {
   if (data.inventaires)  { inventaires = data.inventaires; }
   if (data.ventesCaisse) { ventesCaisse = data.ventesCaisse; }
 
-  // Migration one-shot : catégorie produit déduite des bars assignés
+  // Migration catégorie produit : s'exécute à chaque chargement si nécessaire
   if (BARS.length && ALL_PRODUCTS.length) {
     const merchIds = new Set(BARS.filter(b => b.type === 'merch').map(b => b.id));
     let dirty = false;
     ALL_PRODUCTS.forEach(p => {
-      if (!p.category) {
-        p.category = (p.bars||[]).some(id => merchIds.has(id)) ? 'merch' : 'bar';
+      // Un produit assigné à un bar merch est forcément category:'merch'
+      const expected = (p.bars||[]).some(id => merchIds.has(id)) ? 'merch' : (p.category || 'bar');
+      if (p.category !== expected) {
+        p.category = expected;
         dirty = true;
       }
     });
@@ -2194,7 +2196,7 @@ function deleteBar(barId) {
 }
 
 function addProduct() {
-  const icon = PRODUCT_ICONS[cfgProds.length % PRODUCT_ICONS.length];
+  const icon = cfgTab === 'merch' ? '👕' : PRODUCT_ICONS[cfgProds.length % PRODUCT_ICONS.length];
   const defaultTypes = cfgTab === 'merch' ? ['reassort','retour','casse','offert'] : ['reassort','casse','staff','offert'];
   cfgProds.push({id: uid(), name:'Nouveau produit', icon, pack:1, bars:[], types: defaultTypes, category: cfgTab, alertSeuil:2});
   renderCfgProds();
