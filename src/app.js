@@ -12,6 +12,12 @@ function now() {
 }
 function updateClock() { document.getElementById('clock').textContent = now(); }
 
+window._setNetworkStatus = function(online) {
+  const badge = document.getElementById('network-badge');
+  if (!badge) return;
+  badge.style.display = online ? 'none' : 'flex';
+};
+
 function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
@@ -19,6 +25,7 @@ function showToast(msg) {
 }
 
 function uid() { return 'x' + (++idCounter); }
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 // ════════════════════════════════
 //  NOTIFICATIONS STOCK BAS
@@ -985,7 +992,7 @@ function buildProducts() {
       <div class="pcard-head">
         <span class="pcard-drag-handle" title="Réorganiser">⠿</span>
         <div class="pcard-icon">${p.icon}</div>
-        <div class="pcard-name"><strong>${p.name}</strong><span>${unitStr} · stock : ${init}</span></div>
+        <div class="pcard-name"><strong>${esc(p.name)}</strong><span>${unitStr} · stock : ${init}</span></div>
         <div class="pcard-stock"><strong style="color:${sc}">${displayRemaining}</strong>restants${alertBadge}${isNegative ? '<span class="stock-neg-badge">⚠ NÉGATIF</span>' : ''}</div>
       </div>
       <div class="pcard-actions" style="grid-template-columns:repeat(${ptypes.length},1fr)">${actionBtns}</div>`;
@@ -1162,6 +1169,10 @@ function confirmEntry() {
       return;
     }
   }
+  if (mQty > 20) {
+    const label = mUnitMode ? `${mQty} unités` : `${mQty} ${mProduct.pack > 1 ? 'packs' : 'unités'}`;
+    if (!confirm(`⚠ Saisie importante : ${label} de "${mProduct.name}". Confirmer ?`)) return;
+  }
   const bar = BARS.find(b => b.id === currentBar);
   const units = mUnitMode ? mQty : mQty * (mProduct.pack || 1);
   log.unshift({
@@ -1245,7 +1256,7 @@ function buildLog() {
       <span class="log-type-pill pill-${e.type}">${TYPE_DISPLAY[e.type] || e.type.toUpperCase()}</span>
       ${e.userDisplay ? `<span style="font-size:10px;color:var(--c-muted);font-family:var(--font-mono);flex-shrink:0;">${e.userDisplay}</span>` : ''}
       ${canDelete ? `<button class="log-delete" onclick="deleteLogEntry(${e.id})" title="Annuler cette saisie">✕</button>` : ''}
-      ${e.reason ? `<div class="log-reason">💬 ${e.reason}${e.recipient ? ` · <strong>${e.recipient}</strong>` : ''}</div>` : ''}`;
+      ${e.reason ? `<div class="log-reason">💬 ${esc(e.reason)}${e.recipient ? ` · <strong>${esc(e.recipient)}</strong>` : ''}</div>` : ''}`;
     el.appendChild(div);
   });
 }
@@ -2022,60 +2033,6 @@ function selectEmoji(pid, emoji) {
   document.getElementById('egrid-'+pid).classList.remove('open');
 }
 
-function renderProdBarWidgets(pid) {
-  // Used when bars list changes (add/delete bar) — rebuild checkboxes + stock grid
-  const p = cfgProds.find(x => x.id === pid);
-  if (!p) return;
-  const checksRow = document.getElementById('bchecks-'+pid);
-  if (checksRow) {
-    checksRow.innerHTML = '';
-    const activeBars = cfgBars.length ? cfgBars : BARS;
-    activeBars.forEach(bar => {
-      const checked = p.bars.includes(bar.id);
-      const lbl = document.createElement('label');
-      lbl.className = 'cfg-bar-check';
-      lbl.style.borderColor = checked ? bar.color : '';
-      const cb = document.createElement('input');
-      cb.type = 'checkbox'; cb.dataset.pid = pid; cb.dataset.bid = bar.id;
-      if (checked) cb.checked = true;
-      const span = document.createElement('span');
-      span.textContent = bar.name; span.style.color = bar.color;
-      lbl.appendChild(cb); lbl.appendChild(span);
-      cb.addEventListener('change', e => {
-        const pidx = cfgProds.findIndex(x => x.id === e.target.dataset.pid);
-        const bid  = e.target.dataset.bid;
-        if (e.target.checked) { if (!cfgProds[pidx].bars.includes(bid)) cfgProds[pidx].bars.push(bid); }
-        else cfgProds[pidx].bars = cfgProds[pidx].bars.filter(x => x !== bid);
-        lbl.style.borderColor = e.target.checked ? bar.color : '';
-        renderStockGrid(pid);
-      });
-      checksRow.appendChild(lbl);
-    });
-  }
-  renderStockGrid(pid);
-}
-
-function renderStockGrid(pid) {
-  const p    = cfgProds.find(x => x.id === pid);
-  const grid = document.getElementById('sgrid-'+pid);
-  if (!p || !grid) return;
-  grid.innerHTML = '';
-  const activeBars = cfgBars.length ? cfgBars : BARS;
-  const assignedBars = activeBars.filter(b => p.bars.includes(b.id));
-  if (!assignedBars.length) { grid.innerHTML = '<span style="font-size:11px;color:var(--c-muted);font-family:var(--font-mono);">Aucun bar sélectionné</span>'; return; }
-  assignedBars.forEach(bar => {
-    const val  = (STOCKS[bar.id] && STOCKS[bar.id][pid]) || 0;
-    const cell = document.createElement('div');
-    cell.className = 'cfg-stock-cell';
-    cell.innerHTML = `<span class="cfg-stock-bar-lbl" style="color:${bar.color}">${bar.name}</span>
-      <input class="cfg-inp-stock" data-bid="${bar.id}" data-pid="${pid}" type="number" min="0" value="${val}">`;
-    cell.querySelector('input').addEventListener('input', e => {
-      if (!STOCKS[e.target.dataset.bid]) STOCKS[e.target.dataset.bid] = {};
-      STOCKS[e.target.dataset.bid][e.target.dataset.pid] = parseInt(e.target.value) || 0;
-    });
-    grid.appendChild(cell);
-  });
-}
 
 // ════════════════════════════════
 //  MODE INVENTAIRE
@@ -2187,7 +2144,9 @@ function addBar() {
 }
 
 function deleteBar(barId) {
-  if (cfgBars.length <= 1) { showToast('Minimum 1 bar requis'); return; }
+  const barType = cfgBars.find(b => b.id === barId)?.type || 'bar';
+  const sameType = cfgBars.filter(b => (b.type || 'bar') === barType);
+  if (sameType.length <= 1) { showToast('Minimum 1 point de vente requis'); return; }
   if (!confirm('Supprimer ce bar ?')) return;
   cfgBars = cfgBars.filter(b => b.id !== barId);
   cfgProds.forEach(p => { p.bars = (p.bars||[]).filter(id => id !== barId); });
@@ -2279,8 +2238,8 @@ function exportCSV() {
   const activeLog = log.filter(e => !e.day || e.day === currentDay);
 
   let csv = '\uFEFF';
-  csv += `--- COMPARATIF STOCK vs VENTES${dayStr} (à rapprocher du rapport Kappture Qty) ---\n`;
-  csv += 'Événement,Jour,Bar,Produit,Stock départ (cdt),Stock départ (unités),Sortie bar (cdt),Sortie bar (unités),Casse (unités),Staff (unités),Offert (unités),Retour camion (unités),Entamé perdu (unités),Total sorti (unités)\n';
+  csv += `--- COMPARATIF STOCK vs SORTIES/VENTES${dayStr} ---\n`;
+  csv += 'Événement,Jour,Bar,Produit,Stock départ (cdt),Stock départ (unités),Sorties/Ventes (cdt),Sorties/Ventes (unités),Casse (unités),Staff (unités),Offert (unités),Retour (unités),Entamé perdu (unités),Total sorti (unités)\n';
 
   BARS.forEach(bar => {
     const barLog = activeLog.filter(e => e.barId === bar.id);
@@ -2324,6 +2283,7 @@ function exportRecapCSV() {
   const evName = document.getElementById('event-name').textContent;
   const date   = new Date().toISOString().slice(0,10);
   const dayStr = currentDay.toUpperCase();
+  const activeLog = log.filter(e => !e.day || e.day === currentDay);
 
   let csv = '﻿';
 
@@ -2367,6 +2327,29 @@ function exportRecapCSV() {
         csv += `"${bar?.name||inv.barId}","${time}","${p.name}",${theo},${physical},${delta > 0 ? '+'+delta : delta}\n`;
       });
     });
+  }
+
+  // ── Section merch ──
+  const merchBars = BARS.filter(b => b.type === 'merch');
+  if (merchBars.length) {
+    csv += `\n--- MERCH · ${evName} · ${dayStr} ---\n`;
+    csv += 'Point de vente,Produit,Stock initial,Ventes,Retours,Casse,Offerts,Restant\n';
+    let hasMerch = false;
+    merchBars.forEach(bar => {
+      const barLog = activeLog.filter(e => e.barId === bar.id);
+      ALL_PRODUCTS.filter(p => (p.bars||[]).includes(bar.id)).forEach(p => {
+        const init = (STOCKS[bar.id] && STOCKS[bar.id][p.id]) || 0;
+        const plog = barLog.filter(e => e.productId === p.id);
+        const ventes  = plog.filter(e=>e.type==='reassort').reduce((s,e)=>s+e.qty,0);
+        const retours = plog.filter(e=>e.type==='retour').reduce((s,e)=>s+e.qty,0);
+        const casse   = plog.filter(e=>e.type==='casse').reduce((s,e)=>s+e.qty,0);
+        const offert  = plog.filter(e=>e.type==='offert').reduce((s,e)=>s+e.qty,0);
+        if (!init && !ventes) return;
+        hasMerch = true;
+        csv += `"${bar.name}","${p.name}",${init},${ventes},${retours},${casse},${offert},${calcStock(bar.id,p.id)}\n`;
+      });
+    });
+    if (!hasMerch) csv += 'Aucune donnée merch disponible\n';
   }
 
   const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});

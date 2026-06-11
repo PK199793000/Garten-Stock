@@ -57,6 +57,14 @@ window._fbSaveUsers = async function(userList) {
   catch(e) { console.warn('Firebase users save error', e); }
 };
 
+// ── NETWORK STATUS ──
+function _updateNetworkUI() {
+  if (window._setNetworkStatus) window._setNetworkStatus(navigator.onLine);
+}
+window.addEventListener('online',  _updateNetworkUI);
+window.addEventListener('offline', _updateNetworkUI);
+setTimeout(_updateNetworkUI, 1000); // check after app init
+
 // ── LOAD other event (read-only, for history screen) ──
 window._fbLoadEvent = async function(eventId) {
   try {

@@ -464,6 +464,7 @@ html,body{height:100%;background:var(--c-bg);color:var(--c-text);font-family:var
 
 /* ── EVENT CLOSED BANNER ── */
 .event-closed-banner{display:none;background:rgba(224,82,82,.12);border-bottom:1px solid rgba(224,82,82,.3);color:var(--c-red);font-size:12px;font-weight:700;font-family:var(--font-mono);text-align:center;padding:8px 16px;letter-spacing:.05em;}
+.network-badge{display:none;align-items:center;justify-content:center;gap:6px;background:rgba(232,197,71,.15);border-bottom:1px solid rgba(232,197,71,.4);color:var(--c-accent);font-size:11px;font-weight:700;font-family:var(--font-mono);text-align:center;padding:6px 16px;letter-spacing:.04em;}
 .event-locked-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 24px;gap:12px;}
 .event-locked-icon{font-size:48px;}
 .event-locked-title{font-family:var(--font-head);font-size:20px;font-weight:700;letter-spacing:.04em;}
