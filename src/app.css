@@ -147,6 +147,9 @@ html,body{height:100%;background:var(--c-bg);color:var(--c-text);font-family:var
 .cfg-back{font-size:13px;color:var(--c-accent);cursor:pointer;font-family:var(--font-mono);}
 .cfg-main-title{flex:1;font-size:16px;font-weight:700;}
 .cfg-save-top{font-size:13px;color:var(--c-accent);cursor:pointer;font-family:var(--font-mono);font-weight:700;}
+.cfg-tab-bar{display:flex;gap:8px;margin-bottom:20px;background:var(--c-surface2);border-radius:12px;padding:4px;border:1px solid var(--c-border);}
+.cfg-tab{flex:1;padding:10px 0;background:transparent;border:none;border-radius:9px;font-family:var(--font-head);font-size:13px;font-weight:600;color:var(--c-muted);cursor:pointer;transition:all .2s;letter-spacing:.02em;}
+.cfg-tab.active{background:var(--c-surface);color:var(--c-text);box-shadow:0 1px 4px rgba(0,0,0,.35);}
 .cfg-section{margin-bottom:28px;}
 .cfg-section-label{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--c-muted);display:block;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--c-border);}
 .cfg-field label{font-size:11px;color:var(--c-muted);font-family:var(--font-mono);display:block;margin-bottom:4px;}

@@ -1670,14 +1670,37 @@ async function changePIN() {
 //  CONFIG — BUILD
 // ════════════════════════════════
 let cfgBars = [], cfgProds = [];
+let cfgTab = 'bar';
+
+function switchCfgTab(tab) {
+  cfgTab = tab;
+  document.getElementById('cfg-tab-btn-bar').classList.toggle('active', tab === 'bar');
+  document.getElementById('cfg-tab-btn-merch').classList.toggle('active', tab === 'merch');
+  const isBar = tab === 'bar';
+  document.getElementById('cfg-label-bars').textContent = isBar ? 'Points de vente' : 'Points de vente merch';
+  document.getElementById('cfg-label-prods').textContent = isBar ? 'Produits boissons' : 'Produits merch';
+  document.getElementById('cfg-add-bar-btn').textContent = isBar ? '+ Ajouter un bar' : '+ Ajouter un point merch';
+  document.getElementById('cfg-add-prod-btn').textContent = isBar ? '+ Ajouter un produit' : '+ Ajouter un produit merch';
+  const csvBtn = document.getElementById('cfg-csv-btn');
+  if (csvBtn) csvBtn.style.display = isBar ? '' : 'none';
+  renderCfgBars();
+  renderCfgProds();
+}
 
 function openConfig() {
   cfgBars  = BARS.map(b => ({...b}));
   cfgProds = ALL_PRODUCTS.map(p => ({...p, bars:[...p.bars], types:[...(p.types||['reassort','casse','staff','offert'])]}));
+  // Auto-migrate: déduire la catégorie d'après les bars assignés
+  const merchBarIds = new Set(cfgBars.filter(b => b.type === 'merch').map(b => b.id));
+  cfgProds.forEach(p => {
+    if (!p.category) {
+      p.category = (p.bars||[]).some(bid => merchBarIds.has(bid)) ? 'merch' : 'bar';
+    }
+  });
   document.getElementById('cfg-event').value = document.getElementById('event-name').textContent;
+  cfgTab = 'bar';
+  switchCfgTab('bar');
   renderCfgDays();
-  renderCfgBars();
-  renderCfgProds();
   renderCfgUsers();
   document.getElementById('cfg-overlay').classList.add('open');
 }
@@ -1685,25 +1708,19 @@ function openConfig() {
 function renderCfgBars() {
   const el = document.getElementById('cfg-bar-list');
   el.innerHTML = '';
-  cfgBars.forEach((bar, idx) => {
+  const tabBars = cfgBars.filter(b => cfgTab === 'merch' ? b.type === 'merch' : b.type !== 'merch');
+  if (!tabBars.length) {
+    el.innerHTML = `<div style="font-size:12px;color:var(--c-muted);padding:8px 0;font-family:var(--font-mono);">Aucun point de vente ${cfgTab === 'merch' ? 'merch' : ''} configuré.</div>`;
+  }
+  tabBars.forEach(bar => {
+    const idx = cfgBars.findIndex(b => b.id === bar.id);
     const row = document.createElement('div');
     row.className = 'cfg-bar-item';
-    const isMerch = bar.type === 'merch';
     row.innerHTML = `
       <div class="cfg-bar-dot" style="background:${bar.color}"></div>
-      <input class="cfg-inp-barname" data-idx="${idx}" value="${bar.name.replace(/"/g,'&quot;')}" placeholder="Nom du bar">
-      <div class="cfg-bar-type-toggle">
-        <button class="cfg-bar-type-btn${!isMerch?' active':''}" data-bid="${bar.id}" data-type="bar">🍺 Bar</button>
-        <button class="cfg-bar-type-btn${isMerch?' active':''}" data-bid="${bar.id}" data-type="merch">👕 Merch</button>
-      </div>
-      <button class="cfg-del-btn" onclick="deleteBar('${bar.id}')" title="Supprimer ce bar">✕</button>`;
+      <input class="cfg-inp-barname" value="${bar.name.replace(/"/g,'&quot;')}" placeholder="Nom">
+      <button class="cfg-del-btn" onclick="deleteBar('${bar.id}')" title="Supprimer">✕</button>`;
     row.querySelector('input').addEventListener('input', e => { cfgBars[idx].name = e.target.value; refreshProdBarLabels(); });
-    row.querySelectorAll('.cfg-bar-type-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        cfgBars[idx].type = btn.dataset.type;
-        row.querySelectorAll('.cfg-bar-type-btn').forEach(b => b.classList.toggle('active', b.dataset.type === btn.dataset.type));
-      });
-    });
     el.appendChild(row);
   });
 }
@@ -1719,7 +1736,12 @@ const EMOJI_LIST = ['🍺','🍾','💧','🥤','🍷','🥂','🥃','🍹','�
 function renderCfgProds() {
   const el = document.getElementById('cfg-prod-list');
   el.innerHTML = '';
-  cfgProds.forEach((p, pidx) => {
+  const tabProds = cfgProds.filter(p => cfgTab === 'merch' ? p.category === 'merch' : p.category !== 'merch');
+  if (!tabProds.length) {
+    el.innerHTML = `<div style="font-size:12px;color:var(--c-muted);padding:8px 0;font-family:var(--font-mono);">Aucun produit ${cfgTab === 'merch' ? 'merch' : 'boisson'} configuré.</div>`;
+  }
+  tabProds.forEach(p => {
+    const pidx = cfgProds.findIndex(x => x.id === p.id);
     const block = document.createElement('div');
     block.className = 'cfg-prod-block';
 
@@ -1875,15 +1897,19 @@ function renderCfgProds() {
       if (idx2 !== -1) cfgProds[idx2].portionCl = parseFloat(e.target.value) || undefined;
     });
 
-    block.appendChild(convBlock);
+    if (cfgTab !== 'merch') block.appendChild(convBlock);
 
     const typesWrap = document.createElement('div');
     typesWrap.className = 'cfg-types-wrap';
     typesWrap.innerHTML = '<div class="cfg-types-lbl">Types de sortie disponibles :</div>';
     const typesRow = document.createElement('div');
     typesRow.className = 'cfg-types-checks';
-    const allT = ['reassort','casse','staff','offert'];
-    const typeLabels = {reassort:'SORTIE BAR',casse:'CASSE',staff:'STAFF',offert:'OFFERT'};
+    const allT = cfgTab === 'merch'
+      ? ['reassort','retour','casse','offert']
+      : ['reassort','casse','staff','offert'];
+    const typeLabels = cfgTab === 'merch'
+      ? {reassort:'VENTE', retour:'RETOUR', casse:'CASSE', offert:'OFFERT'}
+      : {reassort:'SORTIE BAR',casse:'CASSE',staff:'STAFF',offert:'OFFERT'};
     const enabledTypes = p.types || allT;
     allT.forEach(t => {
       const on  = enabledTypes.includes(t);
@@ -1907,9 +1933,10 @@ function renderCfgProds() {
     // ── Bars + stock de départ (une ligne par bar) ──
     const barsSection = document.createElement('div');
     barsSection.className = 'cfg-bars-assign';
-    barsSection.innerHTML = '<div class="cfg-bars-assign-lbl">Bars concernés &amp; stock de départ :</div>';
+    barsSection.innerHTML = '<div class="cfg-bars-assign-lbl">Points de vente &amp; stock de départ :</div>';
 
-    const activeBars = cfgBars.length ? cfgBars : BARS;
+    const allBarsForProd = cfgBars.length ? cfgBars : BARS;
+    const activeBars = allBarsForProd.filter(b => cfgTab === 'merch' ? b.type === 'merch' : b.type !== 'merch');
     activeBars.forEach(bar => {
       const assigned = (p.bars||[]).includes(bar.id);
       const stockVal = (STOCKS[bar.id] && STOCKS[bar.id][p.id]) || 0;
@@ -2137,7 +2164,7 @@ function saveInventaire() {
 function addBar() {
   const usedColors = cfgBars.map(b => b.color);
   const color = BAR_COLORS.find(c => !usedColors.includes(c)) || BAR_COLORS[cfgBars.length % BAR_COLORS.length];
-  cfgBars.push({id: uid(), name:'Nouveau bar', color, type:'bar'});
+  cfgBars.push({id: uid(), name: cfgTab === 'merch' ? 'Nouveau point merch' : 'Nouveau bar', color, type: cfgTab});
   renderCfgBars();
   renderCfgProds(); // rebuild product sections so new bar appears in checkboxes
 }
@@ -2153,7 +2180,8 @@ function deleteBar(barId) {
 
 function addProduct() {
   const icon = PRODUCT_ICONS[cfgProds.length % PRODUCT_ICONS.length];
-  cfgProds.push({id: uid(), name:'Nouveau produit', icon, pack:1, bars:[], types:['reassort','casse','staff','offert'], alertSeuil:2});
+  const defaultTypes = cfgTab === 'merch' ? ['reassort','retour','casse','offert'] : ['reassort','casse','staff','offert'];
+  cfgProds.push({id: uid(), name:'Nouveau produit', icon, pack:1, bars:[], types: defaultTypes, category: cfgTab, alertSeuil:2});
   renderCfgProds();
   setTimeout(() => { document.getElementById('cfg-overlay').scrollTop = 99999; }, 50);
 }

@@ -212,19 +212,25 @@
       <button class="cfg-add-btn" onclick="addDay()">+ Ajouter un jour</button>
     </div>
 
-    <!-- Bars -->
+    <!-- Onglets Bar / Merch -->
+    <div class="cfg-tab-bar">
+      <button class="cfg-tab active" id="cfg-tab-btn-bar" onclick="switchCfgTab('bar')">🍺 Bars</button>
+      <button class="cfg-tab" id="cfg-tab-btn-merch" onclick="switchCfgTab('merch')">👕 Merch</button>
+    </div>
+
+    <!-- Points de vente -->
     <div class="cfg-section">
-      <span class="cfg-section-label">Bars</span>
+      <span class="cfg-section-label" id="cfg-label-bars">Points de vente</span>
       <div id="cfg-bar-list"></div>
-      <button class="cfg-add-btn" onclick="addBar()">+ Ajouter un bar</button>
+      <button class="cfg-add-btn" id="cfg-add-bar-btn" onclick="addBar()">+ Ajouter un bar</button>
     </div>
 
     <!-- Produits -->
     <div class="cfg-section">
-      <span class="cfg-section-label">Produits</span>
+      <span class="cfg-section-label" id="cfg-label-prods">Produits boissons</span>
       <div id="cfg-prod-list"></div>
-      <button class="cfg-add-btn" onclick="addProduct()">+ Ajouter un produit</button>
-      <button class="cfg-add-btn" onclick="openCsvImport()" style="margin-top:6px;">↑ Importer stocks CSV</button>
+      <button class="cfg-add-btn" id="cfg-add-prod-btn" onclick="addProduct()">+ Ajouter un produit</button>
+      <button class="cfg-add-btn cfg-csv-btn" id="cfg-csv-btn" onclick="openCsvImport()" style="margin-top:6px;">↑ Importer stocks CSV</button>
     </div>
 
     <!-- Utilisateurs -->
