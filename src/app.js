@@ -839,6 +839,64 @@ function initSwipe() {
 }
 
 // ════════════════════════════════
+//  PRODUCTS SCREEN — DRAG & DROP
+// ════════════════════════════════
+let _dndDragId = null;
+
+function _dndStart(pid) { _dndDragId = pid; }
+
+function _dndOver(pid) {
+  if (!_dndDragId || _dndDragId === pid) return;
+  document.querySelectorAll('.pcard').forEach(c => c.classList.remove('pcard--dnd-over'));
+  document.querySelector(`.pcard[data-pid="${pid}"]`)?.classList.add('pcard--dnd-over');
+}
+
+function _dndDrop(targetPid) {
+  document.querySelectorAll('.pcard').forEach(c => c.classList.remove('pcard--dnd-over'));
+  if (!_dndDragId || _dndDragId === targetPid) { _dndDragId = null; return; }
+  const si = ALL_PRODUCTS.findIndex(p => p.id === _dndDragId);
+  const ti = ALL_PRODUCTS.findIndex(p => p.id === targetPid);
+  if (si === -1 || ti === -1) { _dndDragId = null; return; }
+  const [moved] = ALL_PRODUCTS.splice(si, 1);
+  ALL_PRODUCTS.splice(ti, 0, moved);
+  _dndDragId = null;
+  saveAll();
+  buildProducts();
+}
+
+function _dndEnd() {
+  _dndDragId = null;
+  document.querySelectorAll('.pcard').forEach(c => c.classList.remove('pcard--dnd-over'));
+}
+
+function _setupTouchDrag(container) {
+  let active = false;
+  container.addEventListener('touchstart', e => {
+    if (e.target.closest('.pcard-drag-handle')) {
+      const card = e.target.closest('.pcard');
+      if (card) { _dndStart(card.dataset.pid); active = true; }
+    }
+  }, { passive: true });
+  container.addEventListener('touchmove', e => {
+    if (!active) return;
+    e.preventDefault();
+    const t = e.touches[0];
+    const hit = document.elementFromPoint(t.clientX, t.clientY);
+    const card = hit?.closest('.pcard');
+    if (card?.dataset.pid) _dndOver(card.dataset.pid);
+  }, { passive: false });
+  container.addEventListener('touchend', e => {
+    if (!active) return;
+    active = false;
+    const t = e.changedTouches[0];
+    const hit = document.elementFromPoint(t.clientX, t.clientY);
+    const card = hit?.closest('.pcard');
+    if (card?.dataset.pid) _dndDrop(card.dataset.pid);
+    else _dndEnd();
+  });
+}
+
+// ════════════════════════════════
 //  PRODUCTS SCREEN
 // ════════════════════════════════
 function buildProducts() {
@@ -895,15 +953,23 @@ function buildProducts() {
       : (Number.isInteger(remaining) ? remaining : remaining.toFixed(1));
     const div = document.createElement('div');
     div.className = 'pcard' + (isAlert || isNegative ? ' pcard--alert' : '');
+    div.dataset.pid = p.id;
+    div.draggable = true;
     div.innerHTML = `
       <div class="pcard-head">
+        <span class="pcard-drag-handle" title="Réorganiser">⠿</span>
         <div class="pcard-icon">${p.icon}</div>
         <div class="pcard-name"><strong>${p.name}</strong><span>${unitStr} · stock : ${init}</span></div>
         <div class="pcard-stock"><strong style="color:${sc}">${displayRemaining}</strong>restants${alertBadge}${isNegative ? '<span class="stock-neg-badge">⚠ NÉGATIF</span>' : ''}</div>
       </div>
       <div class="pcard-actions" style="grid-template-columns:repeat(${ptypes.length},1fr)">${actionBtns}</div>`;
+    div.addEventListener('dragstart', () => _dndStart(p.id));
+    div.addEventListener('dragover', e => { e.preventDefault(); _dndOver(p.id); });
+    div.addEventListener('drop', e => { e.preventDefault(); _dndDrop(p.id); });
+    div.addEventListener('dragend', _dndEnd);
     el.appendChild(div);
   });
+  _setupTouchDrag(el);
 }
 
 // ════════════════════════════════
@@ -1587,7 +1653,7 @@ function refreshProdBarLabels() {
   });
 }
 
-const EMOJI_LIST = ['🍺','🍾','💧','🥤','🍷','🥂','🥃','🍹','🧃','☕','🍵','🫖','🧋','🥛','🍦','🍔','🌮','🍕','🥗','🍱','🧁','🍰','🎂','🍫','🍬','🍭','🫗','🫙','📦','🛒','🧊','❄️','🔥','⭐','💡','📋'];
+const EMOJI_LIST = ['🍺','🍾','💧','🥤','🍷','🥂','🥃','🍹','🧃','☕','🍵','🫖','🧋','🥛','🍦','🍔','🌮','🍕','🥗','🍱','🧁','🍰','🎂','🍫','🍬','🍭','🫗','🫙','📦','🛒','🧊','❄️','🔥','⭐','💡','📋','👕','🧥','👜','🧢','🪭'];
 
 function renderCfgProds() {
   const el = document.getElementById('cfg-prod-list');
