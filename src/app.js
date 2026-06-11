@@ -665,7 +665,9 @@ function migrateProduct(p) {
 
 function migrateBar(b) {
   if (b.type) return b;
-  return { ...b, type: 'bar' };
+  // Heuristique : un bar dont le nom contient "merch" est de type merch
+  const type = b.name && /merch/i.test(b.name) ? 'merch' : 'bar';
+  return { ...b, type };
 }
 
 window._fbApply = function(data) {
@@ -683,6 +685,19 @@ window._fbApply = function(data) {
   if (data.pinHash)    { CONFIG_PIN_HASH = data.pinHash; CONFIG_PIN_LEN = data.pinLen || 3; }
   if (data.inventaires)  { inventaires = data.inventaires; }
   if (data.ventesCaisse) { ventesCaisse = data.ventesCaisse; }
+
+  // Migration one-shot : catégorie produit déduite des bars assignés
+  if (BARS.length && ALL_PRODUCTS.length) {
+    const merchIds = new Set(BARS.filter(b => b.type === 'merch').map(b => b.id));
+    let dirty = false;
+    ALL_PRODUCTS.forEach(p => {
+      if (!p.category) {
+        p.category = (p.bars||[]).some(id => merchIds.has(id)) ? 'merch' : 'bar';
+        dirty = true;
+      }
+    });
+    if (dirty) setTimeout(() => saveAll(), 300);
+  }
   if (data.eventClosed !== undefined) {
     eventClosed = data.eventClosed;
     applyEventClosedUI();
