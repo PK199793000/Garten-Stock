@@ -1320,7 +1320,8 @@ function buildRecap() {
   // ── SECTION PAR BAR ──
   BARS.forEach(bar => {
     const bLog = activeLog.filter(e => e.barId === bar.id);
-    if (!bLog.length) return;
+    const barProdsWithStock = ALL_PRODUCTS.filter(p => (p.bars||[]).includes(bar.id) && ((STOCKS[bar.id] && STOCKS[bar.id][p.id]) || 0) > 0);
+    if (!bLog.length && (bar.type !== 'merch' || !barProdsWithStock.length)) return;
     hasData = true;
 
     // ── MERCH BAR : vue simplifiée ──
