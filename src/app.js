@@ -2199,6 +2199,18 @@ function closeConfig() { document.getElementById('cfg-overlay').classList.remove
 // ════════════════════════════════
 const DEFAULT_ICONS = { bar: '🍺', merch: '👕' };
 
+function loadProdImportFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('prod-import-text').value = e.target.result;
+    previewProdImport();
+  };
+  reader.readAsText(file, 'utf-8');
+  input.value = '';
+}
+
 function openProdImport() {
   document.getElementById('prod-import-text').value = '';
   document.getElementById('prod-import-preview').innerHTML = '';
