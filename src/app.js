@@ -681,9 +681,14 @@ window._fbApply = function(data) {
   let changed = false;
   if (data.log)      { log = data.log;                              changed = true; }
   if (data.STOCKS)   { STOCKS = data.STOCKS;                        changed = true; }
-  if (data.BARS)     { BARS = data.BARS.map(b => migrateBar(b));    changed = true; }
+  if (data.BARS)     {
+    BARS = data.BARS.map(b => migrateBar(b));
+    BARS.forEach(b => { const n = parseInt((b.id||'').replace(/\D/g,'')); if (n > idCounter) idCounter = n; });
+    changed = true;
+  }
   if (data.PRODUCTS) {
     ALL_PRODUCTS = data.PRODUCTS.map(p => migrateProduct(p));
+    ALL_PRODUCTS.forEach(p => { const n = parseInt((p.id||'').replace(/\D/g,'')); if (n > idCounter) idCounter = n; });
     changed = true;
   }
   if (data.days)     { days = data.days;             changed = true; }
