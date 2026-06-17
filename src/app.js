@@ -2246,13 +2246,16 @@ function confirmProdImport() {
   if (!text) { showToast('CSV vide'); return; }
   const { rows, errors } = _parseProdImportLines(text);
   if (errors.length) { showToast('⚠ ' + errors[0]); return; }
-  const defaultTypes = cfgTab === 'merch' ? ['reassort','retour','casse','offert'] : ['reassort','casse','staff','offert'];
+  let nBar = 0, nMerch = 0;
   rows.forEach(r => {
-    cfgProds.push({ id: uid(), name: r.nom, icon: r.icon, pack: r.pack, bars: [], types: defaultTypes, category: r.cat, alertSeuil: 2 });
+    const types = r.cat === 'merch' ? ['reassort','retour','casse','offert'] : ['reassort','casse','staff','offert'];
+    cfgProds.push({ id: uid(), name: r.nom, icon: r.icon, pack: r.pack, bars: [], types, category: r.cat, alertSeuil: 2 });
+    r.cat === 'merch' ? nMerch++ : nBar++;
   });
   renderCfgProds();
   closeProdImport();
-  showToast(`✓ ${rows.length} produits importés — assignez-les à un point de vente puis enregistrez`);
+  const detail = [nBar && `${nBar} bar`, nMerch && `${nMerch} merch`].filter(Boolean).join(', ');
+  showToast(`✓ ${rows.length} produits importés (${detail}) — assignez-les puis enregistrez`);
 }
 
 function downloadProdImportTemplate() {
