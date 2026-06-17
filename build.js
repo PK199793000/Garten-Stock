@@ -39,14 +39,16 @@ fs.mkdirSync('dist', { recursive: true });
 // firebase-init.js avec les valeurs injectées
 fs.writeFileSync(path.join('dist', 'firebase-init.js'), firebaseInit, 'utf8');
 
-// Générer un HTML par event
+// Générer un HTML par event (dist/ pour Netlify + racine pour usage local)
 events.forEach(({ id, title, eventName }) => {
   const html = template
     .replaceAll('{{TITLE}}', title)
     .replaceAll('{{EVENT_NAME}}', eventName);
-  const out = path.join('dist', `${id}.html`);
-  fs.writeFileSync(out, html, 'utf8');
-  console.log(`✓ dist/${id}.html`);
+  const distOut = path.join('dist', `${id}.html`);
+  fs.writeFileSync(distOut, html, 'utf8');
+  const rootOut = `${id}.html`;
+  fs.writeFileSync(rootOut, html, 'utf8');
+  console.log(`✓ dist/${id}.html + ${id}.html`);
 });
 
 console.log(`\nBuild OK — ${events.length} fichiers générés.`);

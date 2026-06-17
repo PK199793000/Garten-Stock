@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="theme-color" content="#e8c547">
+<title>Gärten Stock — Ludovico Einaudi</title>
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+<script type="module" src="firebase-init.js"></script>
+</head>
+<body>
+<!-- ════ LOGIN SCREEN ════ -->
+<div class="login-screen active" id="login-screen">
+  <div class="login-logo"><img src="logo.png" alt="Gärten Drinks"></div>
+  <div class="login-box">
+    <div class="login-title">Connexion</div>
+    <div class="login-sub">Identifiez-vous pour accéder à l'app</div>
+    <div class="login-field">
+      <label>Identifiant</label>
+      <input class="login-input" id="login-id" type="text" autocomplete="username" placeholder="votre identifiant">
+    </div>
+    <div class="login-field">
+      <label>Mot de passe</label>
+      <input class="login-input" id="login-pw" type="password" autocomplete="current-password" placeholder="••••••••">
+    </div>
+    <button class="login-btn" onclick="doLogin()">Se connecter</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<!-- ════ ADD USER MODAL ════ -->
+<div class="user-modal-overlay" id="user-modal-overlay" onclick="closeUserModal(event)">
+  <div class="user-modal">
+    <h3 id="um-title">Nouvel utilisateur</h3>
+    <div class="um-field"><label>Identifiant</label><input class="um-input" id="um-id" placeholder="ex: jean.martin"></div>
+    <div class="um-field"><label>Mot de passe</label><input class="um-input" id="um-pw" type="password" placeholder="••••••••"></div>
+    <div class="um-field">
+      <label>Rôle</label>
+      <select class="um-select" id="um-role" onchange="umRoleChange()">
+        <option value="magasinier">Magasinier</option>
+        <option value="chef_bar">Chef de bar</option>
+        <option value="directeur">Directeur</option>
+      </select>
+    </div>
+    <div class="um-field" id="um-bar-field">
+      <label>Bar assigné</label>
+      <div class="um-bars-wrap" id="um-bars-wrap"></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px;">
+      <button style="flex:1;padding:12px;background:transparent;border:1px solid var(--c-border2);border-radius:10px;font-family:var(--font-head);font-size:14px;font-weight:600;cursor:pointer;color:var(--c-muted);" onclick="closeUserModal()">Annuler</button>
+      <button style="flex:2;padding:12px;background:var(--c-accent);color:#000;border:none;border-radius:10px;font-family:var(--font-head);font-size:14px;font-weight:700;cursor:pointer;" onclick="saveUser()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ IMPORT PRODUITS CSV ════ -->
+<div class="user-modal-overlay" id="prod-import-overlay" onclick="closeProdImport(event)">
+  <div class="user-modal" style="max-width:480px;">
+    <h3>Importer produits CSV</h3>
+    <p style="font-size:12px;color:var(--c-muted);font-family:var(--font-mono);margin-bottom:4px;">Colonnes : <strong>Nom</strong>, Icone, Pack, Categorie</p>
+    <p style="font-size:11px;color:var(--c-muted);font-family:var(--font-mono);margin-bottom:12px;">Icone/Pack/Categorie optionnels. Categorie : <code>bar</code> ou <code>merch</code>.</p>
+    <div class="um-field">
+      <label style="display:flex;align-items:center;justify-content:space-between;">
+        Coller le CSV ou charger un fichier
+        <label style="cursor:pointer;font-size:11px;padding:4px 10px;background:var(--c-surface2);border:1px solid var(--c-border2);border-radius:8px;color:var(--c-muted);font-family:var(--font-mono);">
+          📂 Fichier
+          <input type="file" accept=".csv,.txt" style="display:none" onchange="loadProdImportFile(this)">
+        </label>
+      </label>
+      <textarea class="um-input" id="prod-import-text" rows="7" style="resize:vertical;font-family:var(--font-mono);font-size:12px;" placeholder="Blonde 50cl,🍺,1,bar&#10;Eau 50cl,💧,1,bar&#10;T-Shirt GP,👕,1,merch" oninput="previewProdImport()"></textarea>
+    </div>
+    <div id="prod-import-preview" style="font-size:11px;font-family:var(--font-mono);margin-bottom:12px;max-height:120px;overflow-y:auto;"></div>
+    <div style="display:flex;gap:8px;">
+      <button style="flex:1;padding:12px;background:transparent;border:1px solid var(--c-border2);border-radius:10px;font-family:var(--font-head);font-size:13px;font-weight:600;cursor:pointer;color:var(--c-muted);" onclick="downloadProdImportTemplate()">Modèle CSV</button>
+      <button style="flex:1;padding:12px;background:transparent;border:1px solid var(--c-border2);border-radius:10px;font-family:var(--font-head);font-size:13px;font-weight:600;cursor:pointer;color:var(--c-muted);" onclick="closeProdImport()">Annuler</button>
+      <button style="flex:2;padding:12px;background:var(--c-accent);color:#000;border:none;border-radius:10px;font-family:var(--font-head);font-size:14px;font-weight:700;cursor:pointer;" onclick="confirmProdImport()">Importer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ CSV IMPORT MODAL ════ -->
+<div class="user-modal-overlay" id="csv-import-overlay" onclick="closeCsvImport(event)">
+  <div class="user-modal">
+    <h3>Importer stocks CSV</h3>
+    <p style="font-size:12px;color:var(--c-muted);font-family:var(--font-mono);margin-bottom:12px;">Format : bar_id,product_id,quantite<br>Ex: b1,fut_blonde,4</p>
+    <div class="um-field">
+      <label>Coller le CSV ici</label>
+      <textarea class="um-input" id="csv-import-text" rows="6" style="resize:vertical;font-family:var(--font-mono);font-size:12px;" placeholder="b1,fut_blonde,4&#10;b1,eau_50,8&#10;b2,fut_blonde,4"></textarea>
+    </div>
+    <div id="csv-import-preview" style="font-size:11px;color:var(--c-muted);font-family:var(--font-mono);margin-bottom:12px;"></div>
+    <div style="display:flex;gap:8px;">
+      <button style="flex:1;padding:12px;background:transparent;border:1px solid var(--c-border2);border-radius:10px;font-family:var(--font-head);font-size:14px;font-weight:600;cursor:pointer;color:var(--c-muted);" onclick="closeCsvImport()">Annuler</button>
+      <button style="flex:2;padding:12px;background:var(--c-accent);color:#000;border:none;border-radius:10px;font-family:var(--font-head);font-size:14px;font-weight:700;cursor:pointer;" onclick="confirmCsvImport()">Importer</button>
+    </div>
+  </div>
+</div>
+
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-logo"><img src="logo.png" alt="Gärten Drinks"></div>
+    <div class="topbar-bottom">
+      <div class="topbar-event" id="event-name">Ludovico Einaudi · 26-27 juin 2026</div>
+      <div class="day-selector" id="day-selector"></div>
+      <div class="topbar-clock" id="clock">--:--</div>
+      <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="Changer le thème">🌙</button>
+      <div class="user-badge" id="user-badge"></div>
+    </div>
+  </div>
+  <div class="bar-selector" id="bar-selector"></div>
+  <div class="event-closed-banner" id="event-closed-banner">🔒 Événement terminé — Mode lecture seule</div>
+  <div class="network-badge" id="network-badge" style="display:none">📵 Hors ligne — saisies en attente de synchronisation</div>
+
+  <div class="screen active" id="screen-sorties">
+    <div class="section-head">
+      <span class="section-title" id="bar-product-count">Produits</span>
+      <span class="section-action" id="inv-btn" onclick="openInventaire()" style="margin-right:6px;">📦 Inventaire</span>
+      <span class="section-action" onclick="requestConfig()">⚙ Configurer</span>
+    </div>
+    <div class="product-list" id="product-list"></div>
+  </div>
+
+  <div class="screen" id="screen-log">
+    <div class="section-head">
+      <span class="section-title">Historique</span>
+      <span class="section-action" onclick="clearLog()">Effacer tout</span>
+    </div>
+    <div class="log-list" id="log-list"><div class="log-empty">Aucune sortie enregistrée</div></div>
+  </div>
+
+  <div class="screen" id="screen-recap">
+    <div id="recap-content"></div>
+    <div class="export-row">
+      <button class="export-btn" onclick="exportCSV()">↓ CSV log</button>
+      <button class="export-btn export-btn-recap" onclick="exportRecapCSV()">📊 CSV récap</button>
+      <button class="export-btn export-btn-print" onclick="printRecap()">🖨 Imprimer PDF</button>
+    </div>
+  </div>
+
+  <div class="screen" id="screen-history">
+    <div class="section-head">
+      <span class="section-title">Autres événements</span>
+    </div>
+    <div id="history-content" style="padding:0 16px 80px;"></div>
+  </div>
+
+  <div class="fin-event-bar" id="fin-event-bar">
+    <button class="fin-event-btn" id="fin-event-btn" onclick="openFinEvent()">🏁 Fin d'événement</button>
+    <button class="logout-bar-btn" onclick="doLogout()">🚪 Déconnexion</button>
+  </div>
+
+  <div class="navbar">
+    <button class="nav-btn active" id="nav-sorties" onclick="goScreen('sorties')"><span class="nav-icon">📦</span>Sorties</button>
+    <button class="nav-btn" id="nav-log" onclick="goScreen('log')"><span class="nav-icon">📋</span>Log</button>
+    <button class="nav-btn" id="nav-recap" onclick="goScreen('recap')"><span class="nav-icon">📊</span>Récap</button>
+    <button class="nav-btn" id="nav-history" onclick="goScreen('history')" style="display:none"><span class="nav-icon">📅</span>Historique</button>
+  </div>
+</div>
+
+<!-- SAISIE MODAL -->
+<div class="overlay" id="overlay" onclick="overlayClick(event)">
+  <div class="modal">
+    <div class="modal-product" id="m-name"></div>
+    <div class="modal-sub" id="m-sub"></div>
+    <div class="qty-control">
+      <button class="q-btn" onclick="adjQty(-1)">−</button>
+      <div class="q-val" id="m-qty">1</div>
+      <button class="q-btn" onclick="adjQty(1)">+</button>
+    </div>
+    <div class="qty-hint" id="m-hint"></div>
+    <div class="unit-mode-wrap" id="unit-mode-wrap">
+      <button class="unit-mode-btn" id="unit-mode-btn" onclick="toggleUnitMode()">🔢 Par unité</button>
+    </div>
+    <div class="type-grid" id="m-type-grid"></div>
+    <div class="m-reason-field" id="m-reason-field">
+      <label class="m-reason-label"><span id="m-reason-label-text">Motif</span> <span>*</span></label>
+      <textarea class="m-reason-input" id="m-reason" rows="2" placeholder=""></textarea>
+    </div>
+    <div class="m-reason-field" id="m-recipient-field" style="display:none;margin-top:6px;">
+      <label class="m-reason-label">Pour qui <span>*</span></label>
+      <input class="m-reason-input" id="m-recipient" type="text" placeholder="Artiste, table VIP, nom…" style="padding:6px 0;">
+    </div>
+    <button class="confirm-btn" onclick="confirmEntry()">Confirmer la sortie</button>
+    <span class="cancel-link" onclick="closeOverlay()">Annuler</span>
+  </div>
+</div>
+
+<!-- PIN -->
+<div class="pin-overlay" id="pin-overlay">
+  <div class="pin-box">
+    <div class="pin-title">Accès restreint</div>
+    <div class="pin-sub">Code directeur requis</div>
+    <div class="pin-dots" id="pin-dots"></div>
+    <div class="pin-grid">
+      <button class="pin-key" onclick="pinKey('1')">1</button>
+      <button class="pin-key" onclick="pinKey('2')">2</button>
+      <button class="pin-key" onclick="pinKey('3')">3</button>
+      <button class="pin-key" onclick="pinKey('4')">4</button>
+      <button class="pin-key" onclick="pinKey('5')">5</button>
+      <button class="pin-key" onclick="pinKey('6')">6</button>
+      <button class="pin-key" onclick="pinKey('7')">7</button>
+      <button class="pin-key" onclick="pinKey('8')">8</button>
+      <button class="pin-key" onclick="pinKey('9')">9</button>
+      <button class="pin-key sym" onclick="pinDel()">⌫</button>
+      <button class="pin-key" onclick="pinKey('0')">0</button>
+      <button class="pin-key sym" onclick="pinCancel()">✕</button>
+    </div>
+    <span class="pin-cancel-lnk" onclick="pinCancel()">Annuler</span>
+  </div>
+</div>
+
+<!-- CONFIG -->
+<div class="cfg-overlay" id="cfg-overlay">
+  <div class="cfg-panel">
+    <div class="cfg-topbar">
+      <span class="cfg-back" onclick="closeConfig()">← Retour</span>
+      <span class="cfg-main-title">Configuration</span>
+      <span class="cfg-save-top" onclick="saveConfig()">Enregistrer</span>
+    </div>
+
+    <!-- Événement -->
+    <div class="cfg-section">
+      <span class="cfg-section-label">Événement</span>
+      <div class="cfg-field">
+        <label>Nom de l'événement</label>
+        <input class="cfg-input-text" id="cfg-event" value="Ludovico Einaudi · 26-27 juin 2026">
+      </div>
+    </div>
+
+    <!-- Jours -->
+    <div class="cfg-section">
+      <span class="cfg-section-label">Jours</span>
+      <div id="cfg-day-list"></div>
+      <button class="cfg-add-btn" onclick="addDay()">+ Ajouter un jour</button>
+    </div>
+
+    <!-- Onglets Bar / Merch -->
+    <div class="cfg-tab-bar">
+      <button class="cfg-tab active" id="cfg-tab-btn-bar" onclick="switchCfgTab('bar')">🍺 Bars</button>
+      <button class="cfg-tab" id="cfg-tab-btn-merch" onclick="switchCfgTab('merch')">👕 Merch</button>
+    </div>
+
+    <!-- Points de vente -->
+    <div class="cfg-section">
+      <span class="cfg-section-label" id="cfg-label-bars">Points de vente</span>
+      <div id="cfg-bar-list"></div>
+      <button class="cfg-add-btn" id="cfg-add-bar-btn" onclick="addBar()">+ Ajouter un bar</button>
+    </div>
+
+    <!-- Produits -->
+    <div class="cfg-section">
+      <span class="cfg-section-label" id="cfg-label-prods">Produits boissons</span>
+      <div id="cfg-prod-list"></div>
+      <button class="cfg-add-btn" id="cfg-add-prod-btn" onclick="addProduct()">+ Ajouter un produit</button>
+      <button class="cfg-add-btn" id="cfg-import-prod-btn" onclick="openProdImport()" style="margin-top:6px;">↑ Importer produits CSV</button>
+      <button class="cfg-add-btn cfg-csv-btn" id="cfg-csv-btn" onclick="openCsvImport()" style="margin-top:6px;">↑ Importer stocks CSV</button>
+    </div>
+
+    <!-- Utilisateurs -->
+    <div class="cfg-section">
+      <span class="cfg-section-label">Utilisateurs</span>
+      <div id="cfg-user-list"></div>
+      <button class="cfg-add-btn" onclick="openAddUserModal()">+ Ajouter un utilisateur</button>
+    </div>
+
+    <!-- Sécurité -->
+    <div class="cfg-section">
+      <span class="cfg-section-label">Sécurité</span>
+      <div class="cfg-field" style="margin-bottom:10px;">
+        <label>Nouveau code PIN (4 chiffres)</label>
+        <input class="cfg-input-text" id="cfg-new-pin" type="password" maxlength="4" placeholder="nouveau PIN" inputmode="numeric">
+      </div>
+      <button class="cfg-add-btn" onclick="changePIN()">Changer le PIN</button>
+    </div>
+
+    <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--c-border);">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--c-muted);margin-bottom:10px;">Zone dangereuse</div>
+      <button id="cfg-close-event-btn" onclick="toggleEventClosed()" style="width:100%;padding:13px;background:transparent;border:1px solid rgba(224,82,82,.4);border-radius:10px;font-family:var(--font-head);font-size:13px;font-weight:700;cursor:pointer;color:var(--c-red);letter-spacing:.04em;margin-bottom:8px;">🔒 Clore l'événement</button>
+      <button onclick="resetAllData()" style="width:100%;padding:13px;background:transparent;border:1px solid rgba(224,82,82,.4);border-radius:10px;font-family:var(--font-head);font-size:13px;font-weight:700;cursor:pointer;color:var(--c-red);letter-spacing:.04em;">⚠ Remettre à zéro les données</button>
+    </div>
+
+    <button class="cfg-close-btn" onclick="saveConfig()">✓ Enregistrer et fermer</button>
+  </div>
+</div>
+
+<!-- FIN D'ÉVÉNEMENT (wizard 2 étapes) -->
+<div class="fin-overlay" id="fin-overlay">
+  <div class="fin-panel">
+
+    <div class="fin-topbar">
+      <span class="fin-back" id="fin-back-btn" onclick="finBack()">← Annuler</span>
+      <span class="fin-main-title">🏁 Clôture · <span id="fin-bar-name"></span></span>
+      <span class="fin-step-badge" id="fin-step-badge">1 / 2</span>
+    </div>
+
+    <!-- ÉTAPE 1 : Retours & Entamés -->
+    <div id="fin-step1">
+      <div class="fin-intro">
+        <div class="fin-intro-title">Retours &amp; Pertes</div>
+        <div class="fin-intro-sub">Renseignez ce qui repart au camion et ce qui est perdu (packs entamés). Laissez vide si rien.</div>
+      </div>
+      <div id="fin-products-list"></div>
+      <div class="fin-actions">
+        <button class="fin-next-btn" onclick="confirmFinStep1()">Suivant — Inventaire →</button>
+      </div>
+    </div>
+
+    <!-- ÉTAPE 2 : Inventaire physique -->
+    <div id="fin-step2" style="display:none">
+      <div class="fin-intro">
+        <div class="fin-intro-title">Inventaire physique</div>
+        <div class="fin-intro-sub">Comptez ce qui reste physiquement dans le bar et saisissez les quantités.</div>
+      </div>
+      <div id="fin-inv-list"></div>
+      <div class="fin-actions">
+        <button class="fin-next-btn" onclick="confirmFinStep2()">✓ Enregistrer &amp; Fermer ma session</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- INVENTAIRE -->
+<div class="inv-overlay" id="inv-overlay">
+  <div class="inv-panel">
+    <div class="inv-topbar">
+      <span class="inv-back" onclick="closeInventaire()">← Retour</span>
+      <span class="inv-main-title">Inventaire · <span id="inv-bar-name"></span></span>
+      <span class="inv-save-btn" onclick="saveInventaire()">Enregistrer</span>
+    </div>
+    <div class="inv-meta" id="inv-meta"></div>
+    <div id="inv-content"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
