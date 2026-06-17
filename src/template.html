@@ -58,6 +58,25 @@
   </div>
 </div>
 
+<!-- ════ IMPORT PRODUITS CSV ════ -->
+<div class="user-modal-overlay" id="prod-import-overlay" onclick="closeProdImport(event)">
+  <div class="user-modal" style="max-width:480px;">
+    <h3>Importer produits CSV</h3>
+    <p style="font-size:12px;color:var(--c-muted);font-family:var(--font-mono);margin-bottom:4px;">Colonnes : <strong>Nom</strong>, Icone, Pack, Categorie</p>
+    <p style="font-size:11px;color:var(--c-muted);font-family:var(--font-mono);margin-bottom:12px;">Icone/Pack/Categorie optionnels. Categorie : <code>bar</code> ou <code>merch</code>.</p>
+    <div class="um-field">
+      <label>Coller le CSV ici</label>
+      <textarea class="um-input" id="prod-import-text" rows="7" style="resize:vertical;font-family:var(--font-mono);font-size:12px;" placeholder="Blonde 50cl,🍺,1,bar&#10;Eau 50cl,💧,1,bar&#10;T-Shirt GP,👕,1,merch" oninput="previewProdImport()"></textarea>
+    </div>
+    <div id="prod-import-preview" style="font-size:11px;font-family:var(--font-mono);margin-bottom:12px;max-height:120px;overflow-y:auto;"></div>
+    <div style="display:flex;gap:8px;">
+      <button style="flex:1;padding:12px;background:transparent;border:1px solid var(--c-border2);border-radius:10px;font-family:var(--font-head);font-size:13px;font-weight:600;cursor:pointer;color:var(--c-muted);" onclick="downloadProdImportTemplate()">Modèle CSV</button>
+      <button style="flex:1;padding:12px;background:transparent;border:1px solid var(--c-border2);border-radius:10px;font-family:var(--font-head);font-size:13px;font-weight:600;cursor:pointer;color:var(--c-muted);" onclick="closeProdImport()">Annuler</button>
+      <button style="flex:2;padding:12px;background:var(--c-accent);color:#000;border:none;border-radius:10px;font-family:var(--font-head);font-size:14px;font-weight:700;cursor:pointer;" onclick="confirmProdImport()">Importer</button>
+    </div>
+  </div>
+</div>
+
 <!-- ════ CSV IMPORT MODAL ════ -->
 <div class="user-modal-overlay" id="csv-import-overlay" onclick="closeCsvImport(event)">
   <div class="user-modal">
@@ -231,6 +250,7 @@
       <span class="cfg-section-label" id="cfg-label-prods">Produits boissons</span>
       <div id="cfg-prod-list"></div>
       <button class="cfg-add-btn" id="cfg-add-prod-btn" onclick="addProduct()">+ Ajouter un produit</button>
+      <button class="cfg-add-btn" id="cfg-import-prod-btn" onclick="openProdImport()" style="margin-top:6px;">↑ Importer produits CSV</button>
       <button class="cfg-add-btn cfg-csv-btn" id="cfg-csv-btn" onclick="openCsvImport()" style="margin-top:6px;">↑ Importer stocks CSV</button>
     </div>
 

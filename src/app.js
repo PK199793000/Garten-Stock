@@ -2195,6 +2195,76 @@ function saveConfig() {
 function closeConfig() { document.getElementById('cfg-overlay').classList.remove('open'); }
 
 // ════════════════════════════════
+//  IMPORT PRODUITS CSV
+// ════════════════════════════════
+const DEFAULT_ICONS = { bar: '🍺', merch: '👕' };
+
+function openProdImport() {
+  document.getElementById('prod-import-text').value = '';
+  document.getElementById('prod-import-preview').innerHTML = '';
+  document.getElementById('prod-import-overlay').classList.add('open');
+}
+
+function closeProdImport(e) {
+  if (!e || e.target === document.getElementById('prod-import-overlay')) {
+    document.getElementById('prod-import-overlay').classList.remove('open');
+  }
+}
+
+function _parseProdImportLines(text) {
+  const rows = [];
+  const errors = [];
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  lines.forEach((line, i) => {
+    // Skip header if present
+    if (i === 0 && /^nom[,;]/i.test(line)) return;
+    const sep = line.includes(';') ? ';' : ',';
+    const parts = line.split(sep).map(s => s.trim().replace(/^"|"$/g, ''));
+    const nom = parts[0];
+    if (!nom) { errors.push(`Ligne ${i+1} : nom manquant`); return; }
+    const icon = parts[1] || DEFAULT_ICONS[cfgTab];
+    const pack = Math.max(1, parseInt(parts[2]) || 1);
+    const cat  = (parts[3] || '').toLowerCase() === 'merch' ? 'merch' : (parts[3] || '').toLowerCase() === 'bar' ? 'bar' : cfgTab;
+    rows.push({ nom, icon, pack, cat });
+  });
+  return { rows, errors };
+}
+
+function previewProdImport() {
+  const text = document.getElementById('prod-import-text').value.trim();
+  const el = document.getElementById('prod-import-preview');
+  if (!text) { el.innerHTML = ''; return; }
+  const { rows, errors } = _parseProdImportLines(text);
+  if (errors.length) { el.innerHTML = `<span style="color:var(--c-red)">${errors[0]}</span>`; return; }
+  const preview = rows.slice(0, 5).map(r => `<div style="color:var(--c-muted)">${r.icon} ${esc(r.nom)} · pack×${r.pack} · <em>${r.cat}</em></div>`).join('');
+  const more = rows.length > 5 ? `<div style="color:var(--c-muted)">…+${rows.length - 5} autres</div>` : '';
+  el.innerHTML = `<div style="margin-bottom:4px;color:var(--c-accent);font-weight:600;">${rows.length} produit(s) à importer :</div>${preview}${more}`;
+}
+
+function confirmProdImport() {
+  const text = document.getElementById('prod-import-text').value.trim();
+  if (!text) { showToast('CSV vide'); return; }
+  const { rows, errors } = _parseProdImportLines(text);
+  if (errors.length) { showToast('⚠ ' + errors[0]); return; }
+  const defaultTypes = cfgTab === 'merch' ? ['reassort','retour','casse','offert'] : ['reassort','casse','staff','offert'];
+  rows.forEach(r => {
+    cfgProds.push({ id: uid(), name: r.nom, icon: r.icon, pack: r.pack, bars: [], types: defaultTypes, category: r.cat, alertSeuil: 2 });
+  });
+  renderCfgProds();
+  closeProdImport();
+  showToast(`✓ ${rows.length} produits importés — assignez-les à un point de vente puis enregistrez`);
+}
+
+function downloadProdImportTemplate() {
+  const csv = '﻿Nom,Icone,Pack,Categorie\nBlonde 50cl,🍺,1,bar\nEau 50cl,💧,1,bar\nT-Shirt,👕,1,merch\n';
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'modele_import_produits.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ════════════════════════════════
 //  IMPORT STOCKS CSV
 // ════════════════════════════════
 function openCsvImport() {
