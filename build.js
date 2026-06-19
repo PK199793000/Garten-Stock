@@ -31,13 +31,15 @@ Object.entries(FB).forEach(([key, val]) => {
 
 fs.mkdirSync('dist', { recursive: true });
 
-// Fichiers copiés tels quels
+// Fichiers copiés dans dist/ (Netlify) ET à la racine (usage local)
 ['app.css', 'app.js', 'manifest.json', 'logo.png'].forEach(f => {
   fs.copyFileSync(path.join('src', f), path.join('dist', f));
+  fs.copyFileSync(path.join('src', f), f);
 });
 
 // firebase-init.js avec les valeurs injectées
 fs.writeFileSync(path.join('dist', 'firebase-init.js'), firebaseInit, 'utf8');
+fs.writeFileSync('firebase-init.js', firebaseInit, 'utf8');
 
 // Générer un HTML par event (dist/ pour Netlify + racine pour usage local)
 events.forEach(({ id, title, eventName }) => {
