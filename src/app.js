@@ -679,38 +679,31 @@ function migrateBar(b) {
 
 window._fbApply = function(data) {
   let changed = false;
-  if (data.log)      { log = data.log;                              changed = true; }
-  if (data.STOCKS)   { STOCKS = data.STOCKS;                        changed = true; }
-  if (data.BARS)     {
-    BARS = data.BARS.map(b => migrateBar(b));
-    BARS.forEach(b => { const n = parseInt((b.id||'').replace(/\D/g,'')); if (n > idCounter) idCounter = n; });
-    changed = true;
-  }
-  if (data.PRODUCTS) {
-    ALL_PRODUCTS = data.PRODUCTS.map(p => migrateProduct(p));
-    ALL_PRODUCTS.forEach(p => { const n = parseInt((p.id||'').replace(/\D/g,'')); if (n > idCounter) idCounter = n; });
-    changed = true;
-  }
-  if (data.days)     { days = data.days;             changed = true; }
-  if (data.DAY_STOCKS){ DAY_STOCKS = data.DAY_STOCKS; changed = true; }
-  if (data.currentDay){ currentDay = data.currentDay; changed = true; }
-  if (data.pinHash)    { CONFIG_PIN_HASH = data.pinHash; CONFIG_PIN_LEN = data.pinLen || 3; }
-  if (data.inventaires)  { inventaires = data.inventaires; }
-  if (data.ventesCaisse) { ventesCaisse = data.ventesCaisse; }
+  if (data.log)      { log = data.log;  changed = true; }
 
-  // Migration catégorie produit : s'exécute à chaque chargement si nécessaire
-  if (BARS.length && ALL_PRODUCTS.length) {
-    const merchIds = new Set(BARS.filter(b => b.type === 'merch').map(b => b.id));
-    let dirty = false;
-    ALL_PRODUCTS.forEach(p => {
-      // Un produit assigné à un bar merch est forcément category:'merch'
-      const expected = (p.bars||[]).some(id => merchIds.has(id)) ? 'merch' : (p.category || 'bar');
-      if (p.category !== expected) {
-        p.category = expected;
-        dirty = true;
-      }
-    });
-    if (dirty) setTimeout(() => saveAll(), 300);
+  // Ne pas écraser BARS / PRODUCTS / STOCKS pendant que la config est ouverte
+  // (l'utilisateur est en train d'éditer — on ne veut pas perdre ses saisies)
+  if (!cfgOpen) {
+    if (data.STOCKS)   { STOCKS = data.STOCKS;  changed = true; }
+    if (data.BARS)     {
+      BARS = data.BARS.map(b => migrateBar(b));
+      BARS.forEach(b => { const n = parseInt((b.id||'').replace(/\D/g,'')); if (n > idCounter) idCounter = n; });
+      changed = true;
+    }
+    if (data.PRODUCTS) {
+      ALL_PRODUCTS = data.PRODUCTS.map(p => migrateProduct(p));
+      ALL_PRODUCTS.forEach(p => { const n = parseInt((p.id||'').replace(/\D/g,'')); if (n > idCounter) idCounter = n; });
+      changed = true;
+    }
+
+    // Migration catégorie produit (en mémoire uniquement — pas de saveAll auto)
+    if (BARS.length && ALL_PRODUCTS.length) {
+      const merchIds = new Set(BARS.filter(b => b.type === 'merch').map(b => b.id));
+      ALL_PRODUCTS.forEach(p => {
+        const expected = (p.bars||[]).some(id => merchIds.has(id)) ? 'merch' : (p.category || 'bar');
+        if (p.category !== expected) p.category = expected;
+      });
+    }
   }
   if (data.eventClosed !== undefined) {
     eventClosed = data.eventClosed;
@@ -1705,6 +1698,7 @@ async function changePIN() {
 // ════════════════════════════════
 let cfgBars = [], cfgProds = [];
 let cfgTab = 'bar';
+let cfgOpen = false; // bloque les mises à jour Firebase pendant la config
 
 function switchCfgTab(tab) {
   cfgTab = tab;
@@ -1736,6 +1730,7 @@ function openConfig() {
   switchCfgTab('bar');
   renderCfgDays();
   renderCfgUsers();
+  cfgOpen = true;
   document.getElementById('cfg-overlay').classList.add('open');
 }
 
@@ -2186,13 +2181,17 @@ function saveConfig() {
   if (!BARS.find(b => b.id === currentBar)) currentBar = BARS[0]?.id;
   // Sync stock changes to DAY_STOCKS so day-switch doesn't revert config edits
   DAY_STOCKS[currentDay] = JSON.parse(JSON.stringify(STOCKS));
+  cfgOpen = false;
   saveAll();
   document.getElementById('cfg-overlay').classList.remove('open');
   buildDaySelector(); buildBarSelector(); buildProducts();
   showToast('✓ Configuration enregistrée');
 }
 
-function closeConfig() { document.getElementById('cfg-overlay').classList.remove('open'); }
+function closeConfig() {
+  cfgOpen = false;
+  document.getElementById('cfg-overlay').classList.remove('open');
+}
 
 // ════════════════════════════════
 //  IMPORT PRODUITS CSV
