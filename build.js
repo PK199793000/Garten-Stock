@@ -41,11 +41,16 @@ fs.mkdirSync('dist', { recursive: true });
 fs.writeFileSync(path.join('dist', 'firebase-init.js'), firebaseInit, 'utf8');
 fs.writeFileSync('firebase-init.js', firebaseInit, 'utf8');
 
+const buildVersion = Date.now();
+
 // Générer un HTML par event (dist/ pour Netlify + racine pour usage local)
 events.forEach(({ id, title, eventName }) => {
   const html = template
     .replaceAll('{{TITLE}}', title)
-    .replaceAll('{{EVENT_NAME}}', eventName);
+    .replaceAll('{{EVENT_NAME}}', eventName)
+    .replaceAll('src="app.js"', `src="app.js?v=${buildVersion}"`)
+    .replaceAll('href="app.css"', `href="app.css?v=${buildVersion}"`)
+    .replaceAll('src="firebase-init.js"', `src="firebase-init.js?v=${buildVersion}"`);
   const distOut = path.join('dist', `${id}.html`);
   fs.writeFileSync(distOut, html, 'utf8');
   const rootOut = `${id}.html`;
