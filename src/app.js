@@ -963,9 +963,9 @@ function buildProducts() {
     const ps = JSON.stringify(p).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
     const isMerchBar = BARS.find(b => b.id === currentBar)?.type === 'merch';
     const MERCH_ALLOWED = ['reassort','retour','casse','offert'];
-    const userAllowed = CURRENT_USER?.allowedTypes
-      ? (isMerchBar ? CURRENT_USER.allowedTypes.filter(t => MERCH_ALLOWED.includes(t)) : CURRENT_USER.allowedTypes)
-      : (isMerchBar ? MERCH_ALLOWED : ['reassort','casse','staff','offert']);
+    const userAllowed = isMerchBar
+      ? MERCH_ALLOWED
+      : (CURRENT_USER?.allowedTypes || ['reassort','casse','staff','offert']);
     const ptypes = (p.types || (isMerchBar ? MERCH_ALLOWED : ['reassort','casse','staff','offert'])).filter(t => userAllowed.includes(t));
     const TYPE_LABELS = isMerchBar ? { ...TYPE_DISPLAY, reassort: 'VENTE' } : TYPE_DISPLAY;
     const canQuickAdd = isMerchBar ? ['reassort'] : ['reassort','staff'];
@@ -1033,8 +1033,11 @@ function openModal(p, type) {
   document.getElementById('m-name').textContent = p.name;
   document.getElementById('m-sub').textContent  = (BARS.find(b=>b.id===currentBar)||{name:''}).name + ' · ' + (p.pack > 1 ? 'pack ×'+p.pack : (p.liters ? p.liters+'L' : 'unité'));
   updateModalQty();
-  const userAllowed = CURRENT_USER?.allowedTypes || ['reassort','casse','staff','offert'];
-  const availTypes = (p.types || ['reassort','casse','staff','offert']).filter(t => userAllowed.includes(t));
+  const isMerchBarModal = BARS.find(b => b.id === currentBar)?.type === 'merch';
+  const userAllowed = isMerchBarModal
+    ? ['reassort','retour','casse','offert']
+    : (CURRENT_USER?.allowedTypes || ['reassort','casse','staff','offert']);
+  const availTypes = (p.types || (isMerchBarModal ? ['reassort','retour','casse','offert'] : ['reassort','casse','staff','offert'])).filter(t => userAllowed.includes(t));
   buildTypeGrid(availTypes);
   if (!availTypes.includes(mType)) mType = availTypes[0] || type;
   updateTypeUI();
