@@ -2294,29 +2294,27 @@ function confirmProdImport() {
 }
 
 function downloadProdImportTemplate() {
-  const bars  = cfgBars.filter(b => (b.type||'bar') === 'bar');
-  const merchs = cfgBars.filter(b => b.type === 'merch');
-  const b = (i) => bars[i]?.name  || `Bar ${i+1}`;
-  const m = (i) => merchs[i]?.name || `Merch ${i+1}`;
-  const maxBars  = Math.max(bars.length, 2);
-  const maxMerchs = Math.max(merchs.length, 1);
+  const barBars   = cfgBars.filter(b => (b.type||'bar') !== 'merch');
+  const merchBars = cfgBars.filter(b => b.type === 'merch');
 
-  // En-tête unique : Nom,Icone,Pack,Categorie, puis paires Bar/Stock pour chaque point
-  const barPairs   = Array.from({length: maxBars},   (_, i) => `${b(i)},Stock`).join(',');
-  const merchPairs = Array.from({length: maxMerchs},  (_, i) => `${m(i)},Stock`).join(',');
+  const b0 = barBars[0]?.name   || 'Bar Principal';
+  const b1 = barBars[1]?.name   || 'Bar Secondaire';
+  const m0 = merchBars[0]?.name || 'Point Merch';
 
-  const row = (nom, icon, pack, cat, ...stockPairs) =>
-    `${nom},${icon},${pack},${cat},` + stockPairs.flatMap(([n,s]) => [n, s ?? '']).join(',');
-
-  let csv = `﻿Nom,Icone,Pack,Categorie,${barPairs}\n`;
-  csv += row('Biere Blonde 50cl','🍺',1,'bar',...bars.slice(0,maxBars).map((b,i)=>[b.name,i===0?10:8])) + '\n';
-  csv += row('Eau 50cl','💧',1,'bar',...bars.slice(0,maxBars).map((b,i)=>[b.name,12])) + '\n';
-  csv += row('Coca Cola 33cl','🥤',1,'bar',...bars.slice(0,maxBars).map((b,i)=>[b.name,6])) + '\n';
-  csv += row('Verre Rose','🍷',1,'bar',...bars.slice(0,maxBars).map((b,i)=>[b.name,5])) + '\n';
-  csv += `\n﻿Nom,Icone,Pack,Categorie,${merchPairs}\n`;
-  csv += row('T-Shirt','👕',1,'merch',...merchs.slice(0,maxMerchs).map(m=>[m.name,20])) + '\n';
-  csv += row('Casquette','🧢',1,'merch',...merchs.slice(0,maxMerchs).map(m=>[m.name,15])) + '\n';
-  csv += row('Tote Bag','👜',1,'merch',...merchs.slice(0,maxMerchs).map(m=>[m.name,10])) + '\n';
+  let csv = '﻿';
+  csv += `Nom,Icone,Pack,Categorie,${b0},Stock,${b1},Stock\n`;
+  csv += `Biere Blonde 50cl,🍺,1,bar,${b0},10,${b1},8\n`;
+  csv += `Eau 50cl,💧,1,bar,${b0},12,${b1},10\n`;
+  csv += `Coca Cola 33cl,🥤,1,bar,${b0},6,${b1},6\n`;
+  csv += `Verre Rose,🍷,1,bar,${b0},5,${b1},5\n`;
+  csv += `Coupe Champagne,🥂,1,bar,${b0},4,${b1},4\n`;
+  csv += `Red Bull 25cl,🥤,1,bar,${b0},8,${b1},6\n`;
+  csv += `\n`;
+  csv += `Nom,Icone,Pack,Categorie,${m0},Stock\n`;
+  csv += `T-Shirt,👕,1,merch,${m0},20\n`;
+  csv += `Casquette,🧢,1,merch,${m0},15\n`;
+  csv += `Tote Bag,👜,1,merch,${m0},10\n`;
+  csv += `Eventail,🪭,1,merch,${m0},10\n`;
 
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
