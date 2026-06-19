@@ -2225,20 +2225,36 @@ function closeProdImport(e) {
 function _parseProdImportLines(text) {
   const rows = [];
   const errors = [];
-  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  const lines = text.split('\n').map(l => l.trim().replace(/^﻿/, '')).filter(Boolean);
   lines.forEach((line, i) => {
-    // Skip header if present
-    if (i === 0 && /^nom[,;]/i.test(line)) return;
+    if (i === 0 && /^nom[,;]/i.test(line)) return; // skip header
     const sep = line.includes(';') ? ';' : ',';
     const parts = line.split(sep).map(s => s.trim().replace(/^"|"$/g, ''));
     const nom = parts[0];
     if (!nom) { errors.push(`Ligne ${i+1} : nom manquant`); return; }
-    const icon = parts[1] || DEFAULT_ICONS[cfgTab];
-    const pack = Math.max(1, parseInt(parts[2]) || 1);
-    const cat  = (parts[3] || '').toLowerCase() === 'merch' ? 'merch' : (parts[3] || '').toLowerCase() === 'bar' ? 'bar' : cfgTab;
-    rows.push({ nom, icon, pack, cat });
+    const icon     = parts[1] || null; // null = auto selon catégorie
+    const pack     = Math.max(1, parseInt(parts[2]) || 1);
+    const catRaw   = (parts[3] || '').toLowerCase();
+    const cat      = catRaw === 'merch' ? 'merch' : catRaw === 'bar' ? 'bar' : cfgTab;
+    const barName  = parts[4] ? parts[4].trim() : null;
+    const stock    = parts[5] !== undefined ? (parseInt(parts[5]) || 0) : null;
+    rows.push({ nom, icon, pack, cat, barName, stock });
   });
   return { rows, errors };
+}
+
+// Regroupe les lignes par nom de produit (plusieurs lignes = plusieurs bars)
+function _groupProdImportRows(rows) {
+  const map = new Map();
+  rows.forEach(r => {
+    if (!map.has(r.nom)) {
+      map.set(r.nom, { nom: r.nom, icon: r.icon, pack: r.pack, cat: r.cat, barStocks: [] });
+    }
+    const p = map.get(r.nom);
+    if (!p.icon && r.icon) p.icon = r.icon;
+    if (r.barName) p.barStocks.push({ barName: r.barName, stock: r.stock ?? 0 });
+  });
+  return [...map.values()];
 }
 
 function previewProdImport() {
@@ -2246,10 +2262,15 @@ function previewProdImport() {
   const el = document.getElementById('prod-import-preview');
   if (!text) { el.innerHTML = ''; return; }
   const { rows, errors } = _parseProdImportLines(text);
-  if (errors.length) { el.innerHTML = `<span style="color:var(--c-red)">${errors[0]}</span>`; return; }
-  const preview = rows.slice(0, 5).map(r => `<div style="color:var(--c-muted)">${r.icon} ${esc(r.nom)} · pack×${r.pack} · <em>${r.cat}</em></div>`).join('');
-  const more = rows.length > 5 ? `<div style="color:var(--c-muted)">…+${rows.length - 5} autres</div>` : '';
-  el.innerHTML = `<div style="margin-bottom:4px;color:var(--c-accent);font-weight:600;">${rows.length} produit(s) à importer :</div>${preview}${more}`;
+  if (errors.length) { el.innerHTML = `<span style="color:var(--c-red)">${esc(errors[0])}</span>`; return; }
+  const prods = _groupProdImportRows(rows);
+  const preview = prods.slice(0, 5).map(p => {
+    const icon = p.icon || DEFAULT_ICONS[p.cat];
+    const bars = p.barStocks.length ? p.barStocks.map(b => `${b.barName} ×${b.stock}`).join(', ') : 'sans bar';
+    return `<div style="color:var(--c-muted)">${icon} ${esc(p.nom)} · pack×${p.pack} · <em>${p.cat}</em> · ${esc(bars)}</div>`;
+  }).join('');
+  const more = prods.length > 5 ? `<div style="color:var(--c-muted)">…+${prods.length - 5} autres</div>` : '';
+  el.innerHTML = `<div style="margin-bottom:4px;color:var(--c-accent);font-weight:600;">${prods.length} produit(s) à importer :</div>${preview}${more}`;
 }
 
 function confirmProdImport() {
@@ -2257,20 +2278,58 @@ function confirmProdImport() {
   if (!text) { showToast('CSV vide'); return; }
   const { rows, errors } = _parseProdImportLines(text);
   if (errors.length) { showToast('⚠ ' + errors[0]); return; }
+  const prods = _groupProdImportRows(rows);
   let nBar = 0, nMerch = 0;
-  rows.forEach(r => {
+
+  prods.forEach(r => {
+    const icon  = r.icon || DEFAULT_ICONS[r.cat];
     const types = r.cat === 'merch' ? ['reassort','retour','casse','offert'] : ['reassort','casse','staff','offert'];
-    cfgProds.push({ id: uid(), name: r.nom, icon: r.icon, pack: r.pack, bars: [], types, category: r.cat, alertSeuil: 2 });
+    const barIds = [];
+
+    r.barStocks.forEach(({ barName, stock }) => {
+      const bar = cfgBars.find(b => b.name.trim().toLowerCase() === barName.toLowerCase());
+      if (!bar) return;
+      barIds.push(bar.id);
+      if (!STOCKS[bar.id]) STOCKS[bar.id] = {};
+      // On stocke provisoirement — sera persisté lors du saveConfig
+      STOCKS[bar.id]['__pending__' + r.nom] = { name: r.nom, qty: stock };
+    });
+
+    const newProd = { id: uid(), name: r.nom, icon, pack: r.pack, bars: barIds, types, category: r.cat, alertSeuil: 2 };
+    cfgProds.push(newProd);
+
+    // Appliquer le stock en utilisant l'ID réel du produit
+    r.barStocks.forEach(({ barName, stock }) => {
+      const bar = cfgBars.find(b => b.name.trim().toLowerCase() === barName.toLowerCase());
+      if (!bar) return;
+      if (!STOCKS[bar.id]) STOCKS[bar.id] = {};
+      STOCKS[bar.id][newProd.id] = stock;
+      delete STOCKS[bar.id]['__pending__' + r.nom];
+    });
+
     r.cat === 'merch' ? nMerch++ : nBar++;
   });
+
   renderCfgProds();
   closeProdImport();
   const detail = [nBar && `${nBar} bar`, nMerch && `${nMerch} merch`].filter(Boolean).join(', ');
-  showToast(`✓ ${rows.length} produits importés (${detail}) — assignez-les puis enregistrez`);
+  showToast(`✓ ${prods.length} produits importés (${detail}) — vérifiez puis enregistrez`);
 }
 
 function downloadProdImportTemplate() {
-  const csv = '﻿Nom,Icone,Pack,Categorie\nBlonde 50cl,🍺,1,bar\nEau 50cl,💧,1,bar\nT-Shirt,👕,1,merch\n';
+  const barNames = cfgBars.filter(b => (b.type||'bar') === 'bar').map(b => b.name);
+  const merchNames = cfgBars.filter(b => b.type === 'merch').map(b => b.name);
+  const bar1 = barNames[0] || 'Bar Principal';
+  const bar2 = barNames[1] || 'Bar Secondaire';
+  const m1   = merchNames[0] || 'Point Merch';
+  const csv = `﻿Nom,Icone,Pack,Categorie,Point de vente,Stock\n` +
+    `Biere Blonde 50cl,🍺,1,bar,${bar1},10\n` +
+    `Biere Blonde 50cl,🍺,1,bar,${bar2},8\n` +
+    `Eau 50cl,💧,1,bar,${bar1},12\n` +
+    `Coca Cola 33cl,🥤,1,bar,${bar1},6\n` +
+    `Verre Rose,🍷,1,bar,${bar2},5\n` +
+    `T-Shirt,👕,1,merch,${m1},20\n` +
+    `Casquette,🧢,1,merch,${m1},15\n`;
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a'); a.href = url; a.download = 'modele_import_produits.csv';
