@@ -3,3 +3,4 @@ node_modules/
 .DS_Store
 .env
 firebase-init.js
+gartenstock_*.html
