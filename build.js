@@ -58,7 +58,7 @@ events.forEach(({ id, title, eventName }) => {
   console.log(`✓ dist/${id}.html + ${id}.html`);
 });
 
-// Générer le modèle CSV d'import produits
+// Générer le modèle CSV d'import produits (dans dist/ pour Netlify + racine)
 const templateCsv =
 `﻿Nom,Icone,Pack,Categorie,Bar 1,Stock,Bar 2,Stock
 Biere Blonde 50cl,🍺,1,bar,Bar 1,10,Bar 2,8
@@ -75,6 +75,7 @@ Tote Bag,👜,1,merch,Point Merch,10
 Eventail,🪭,1,merch,Point Merch,10
 `;
 fs.writeFileSync('modele_import_produits.csv', templateCsv, 'utf8');
-console.log('✓ modele_import_produits.csv');
+fs.writeFileSync(path.join('dist', 'modele_import_produits.csv'), templateCsv, 'utf8');
+console.log('✓ modele_import_produits.csv (root + dist)');
 
 console.log(`\nBuild OK — ${events.length} fichiers générés.`);

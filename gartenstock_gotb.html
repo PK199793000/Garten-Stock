@@ -10,8 +10,8 @@
 <link rel="manifest" href="manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="app.css?v=1781873081360">
-<script type="module" src="firebase-init.js?v=1781873081360"></script>
+<link rel="stylesheet" href="app.css?v=1781873680627">
+<script type="module" src="firebase-init.js?v=1781873680627"></script>
 </head>
 <body>
 <!-- ════ LOGIN SCREEN ════ -->
@@ -76,7 +76,7 @@
     </div>
     <div id="prod-import-preview" style="font-size:11px;font-family:var(--font-mono);margin-bottom:12px;max-height:120px;overflow-y:auto;"></div>
     <div style="display:flex;gap:8px;">
-      <button style="flex:1;padding:12px;background:transparent;border:1px solid var(--c-border2);border-radius:10px;font-family:var(--font-head);font-size:13px;font-weight:600;cursor:pointer;color:var(--c-muted);" onclick="downloadProdImportTemplate()">Modèle CSV</button>
+      <a href="modele_import_produits.csv" download style="flex:1;padding:12px;background:transparent;border:1px solid var(--c-border2);border-radius:10px;font-family:var(--font-head);font-size:13px;font-weight:600;cursor:pointer;color:var(--c-muted);text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;">Modèle CSV</a>
       <button style="flex:1;padding:12px;background:transparent;border:1px solid var(--c-border2);border-radius:10px;font-family:var(--font-head);font-size:13px;font-weight:600;cursor:pointer;color:var(--c-muted);" onclick="closeProdImport()">Annuler</button>
       <button style="flex:2;padding:12px;background:var(--c-accent);color:#000;border:none;border-radius:10px;font-family:var(--font-head);font-size:14px;font-weight:700;cursor:pointer;" onclick="confirmProdImport()">Importer</button>
     </div>
@@ -340,6 +340,6 @@
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script src="app.js?v=1781873081360"></script>
+<script src="app.js?v=1781873680627"></script>
 </body>
 </html>
