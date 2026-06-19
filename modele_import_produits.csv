@@ -1,0 +1,13 @@
+﻿Nom,Icone,Pack,Categorie,Bar 1,Stock,Bar 2,Stock
+Biere Blonde 50cl,🍺,1,bar,Bar 1,10,Bar 2,8
+Eau 50cl,💧,1,bar,Bar 1,12,Bar 2,10
+Coca Cola 33cl,🥤,1,bar,Bar 1,6,Bar 2,6
+Verre Rose,🍷,1,bar,Bar 1,5,Bar 2,5
+Coupe Champagne,🥂,1,bar,Bar 1,4,Bar 2,4
+Red Bull 25cl,🥤,1,bar,Bar 1,8,Bar 2,6
+
+Nom,Icone,Pack,Categorie,Point Merch,Stock
+T-Shirt,👕,1,merch,Point Merch,20
+Casquette,🧢,1,merch,Point Merch,15
+Tote Bag,👜,1,merch,Point Merch,10
+Eventail,🪭,1,merch,Point Merch,10
