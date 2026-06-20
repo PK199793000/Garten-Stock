@@ -971,7 +971,7 @@ function buildProducts() {
     const canQuickAdd = isMerchBar ? ['reassort'] : ['reassort','staff'];
     const actionBtns = ptypes.map(t => {
       const lp = canQuickAdd.includes(t)
-        ? `onmousedown='startLongPress(${ps},"${t}")' onmouseup='cancelLongPress()' onmouseleave='cancelLongPress()' ontouchstart='startLongPress(${ps},"${t}");event.preventDefault();' ontouchend='cancelLongPress();'`
+        ? `onmousedown='startLongPress(${ps},"${t}")' onmouseup='cancelLongPress()' onmouseleave='cancelLongPress()' ontouchstart='startLongPress(${ps},"${t}");event.preventDefault();' ontouchend='cancelLongPress();if(!_lpFired)handlePactBtn(${ps},"${t}");'`
         : '';
       return `<button class="pact-btn ${t}${canQuickAdd.includes(t)?' pact-lp':''}" onclick='handlePactBtn(${ps},"${t}")' ${lp}>${TYPE_LABELS[t]||t.toUpperCase()}<span class="pact-lp-hint">⚡+1</span></button>`;
     }).join('');
