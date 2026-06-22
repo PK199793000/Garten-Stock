@@ -327,9 +327,9 @@ function umRoleChange() {
 }
 
 const TYPE_DEFAULTS = {
-  directeur:  ['reassort','casse','staff','offert'],
-  chef_bar:   ['reassort','casse','staff','offert'],
-  magasinier: ['reassort','casse'],
+  directeur:  ['reassort','casse','staff','offert','transfert'],
+  chef_bar:   ['reassort','casse','staff','offert','transfert'],
+  magasinier: ['reassort','casse','transfert'],
 };
 // retour et entame sont réservés au mode "Fin d'événement" — pas de bouton produit normal
 
@@ -344,7 +344,7 @@ function addAllowedTypesField(role) {
   wrap.className = 'um-bars-wrap';
   wrap.id = 'um-types-wrap';
   const defaults = TYPE_DEFAULTS[role] || ['reassort','casse','staff','offert'];
-  const typeLabels = {reassort:'Sortie bar', casse:'Casse', staff:'Staff', offert:'Offert'};
+  const typeLabels = {reassort:'Sortie bar', casse:'Casse', staff:'Staff', offert:'Offert', transfert:'Don inter-bar'};
   Object.keys(typeLabels).forEach(t => {
     const chip = document.createElement('div');
     chip.className = 'um-bar-chip' + (defaults.includes(t) ? ' selected' : '');
@@ -515,7 +515,9 @@ function calcStock(barId, productId) {
   const out = dayLog.filter(e => e.type !== 'retour').reduce((s,e) => {
     return s + (e.unitMode && e.pack > 1 ? e.qty / e.pack : e.qty);
   }, 0);
-  return init + retour - out;
+  // Transferts reçus depuis d'autres bars (stock entrant)
+  const transferIn = log.filter(e => e.type === 'transfert' && e.toBarId === barId && e.productId === productId && (!e.day || e.day === currentDay)).reduce((s,e) => s + e.qty, 0);
+  return init + retour - out + transferIn;
 }
 
 // ════════════════════════════════
@@ -972,7 +974,8 @@ function buildProducts() {
     const userAllowed = isMerchBar
       ? MERCH_ALLOWED
       : (CURRENT_USER?.allowedTypes || ['reassort','casse','staff','offert']);
-    const ptypes = (p.types || (isMerchBar ? MERCH_ALLOWED : ['reassort','casse','staff','offert'])).filter(t => userAllowed.includes(t));
+    const baseTypes = isMerchBar ? (p.types || MERCH_ALLOWED) : [...new Set([...(p.types || ['reassort','casse','staff','offert']), 'transfert'])];
+    const ptypes = baseTypes.filter(t => userAllowed.includes(t));
     const TYPE_LABELS = isMerchBar ? { ...TYPE_DISPLAY, reassort: 'VENTE' } : TYPE_DISPLAY;
     const canQuickAdd = isMerchBar ? ['reassort'] : ['reassort','staff'];
     const actionBtns = ptypes.map(t => {
@@ -1019,16 +1022,18 @@ const ALL_TYPES = {
   offert:   {label:'Offert',        sub:'gratuit / artiste'},
   retour:   {label:'Retour camion', sub:'pack non consommé retourné au camion'},
   entame:   {label:'Entamé perdu',  sub:'reste d\'un pack ouvert, non récupérable'},
+  transfert:{label:'Don inter-bar', sub:'transfert de stock vers un autre bar'},
 };
 
 // Labels d'affichage centralisés (la clé interne reste identique)
 const TYPE_DISPLAY = {
-  reassort: 'SORTIE BAR',
-  casse:    'CASSE',
-  staff:    'STAFF',
-  offert:   'OFFERT',
-  retour:   'RETOUR',
-  entame:   'ENTAMÉ',
+  reassort:  'SORTIE BAR',
+  casse:     'CASSE',
+  staff:     'STAFF',
+  offert:    'OFFERT',
+  retour:    'RETOUR',
+  entame:    'ENTAMÉ',
+  transfert: 'DON →',
 };
 
 // Types qui sont des "pertes" réelles (retour n'en est pas un)
@@ -1051,6 +1056,7 @@ function openModal(p, type) {
   const needsReason = ['offert','casse'].includes(mType);
   setReasonField(needsReason, mType);
   setRecipientField(mType === 'offert');
+  setTransferBarField(mType === 'transfert');
   document.getElementById('m-reason').value = '';
   const rec = document.getElementById('m-recipient'); if(rec) rec.value = '';
   document.getElementById('overlay').classList.add('open');
@@ -1124,6 +1130,7 @@ function setType(t) {
   const needsReason = ['offert','casse'].includes(t);
   setReasonField(needsReason, t);
   setRecipientField(t === 'offert');
+  setTransferBarField(t === 'transfert');
   if (!needsReason) document.getElementById('m-reason').value = '';
   if (t !== 'offert') { const r = document.getElementById('m-recipient'); if(r) r.value=''; }
   const btn = document.getElementById('unit-mode-btn');
@@ -1146,6 +1153,18 @@ function setReasonField(show, type) {
 function setRecipientField(show) {
   const el = document.getElementById('m-recipient-field');
   if (el) el.style.display = show ? 'block' : 'none';
+}
+
+function setTransferBarField(show) {
+  const el = document.getElementById('m-transfer-bar-field');
+  if (!el) return;
+  el.style.display = show ? 'block' : 'none';
+  if (show) {
+    const sel = document.getElementById('m-transfer-bar');
+    const others = BARS.filter(b => b.id !== currentBar && b.type !== 'merch');
+    sel.innerHTML = '<option value="">Choisir un bar…</option>' +
+      others.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
+  }
 }
 
 function updateTypeUI() {
@@ -1176,6 +1195,14 @@ function confirmEntry() {
       return;
     }
   }
+  let toBarId = '', toBarName = '';
+  if (mType === 'transfert') {
+    const sel = document.getElementById('m-transfer-bar');
+    toBarId = sel ? sel.value : '';
+    if (!toBarId) { showToast('Choisir le bar destinataire'); return; }
+    const toBar = BARS.find(b => b.id === toBarId);
+    toBarName = toBar ? toBar.name : '';
+  }
   if (mQty > 20) {
     const label = mUnitMode ? `${mQty} unités` : `${mQty} ${mProduct.pack > 1 ? 'packs' : 'unités'}`;
     if (!confirm(`⚠ Saisie importante : ${label} de "${mProduct.name}". Confirmer ?`)) return;
@@ -1187,7 +1214,7 @@ function confirmEntry() {
     barId: currentBar, barName: bar.name,
     productId: mProduct.id, productName: mProduct.name, pack: mProduct.pack,
     qty: mQty, units, type: mType, unitMode: mUnitMode,
-    reason, recipient,
+    reason, recipient, toBarId, toBarName,
     userId:      CURRENT_USER ? CURRENT_USER.id : 'inconnu',
     userDisplay: CURRENT_USER ? (CURRENT_USER.displayName||CURRENT_USER.id) : 'inconnu',
     userRole:    CURRENT_USER ? CURRENT_USER.role : '',
@@ -1196,7 +1223,8 @@ function confirmEntry() {
   closeOverlay();
   buildProducts();
   const qtyLabel = mUnitMode ? mQty+' u.' : mQty+(mProduct.pack>1?' pack'+(mQty>1?'s':''):' u.');
-  showToast('✓ ' + mProduct.name + ' · ' + qtyLabel + ' · ' + mType);
+  if (mType === 'transfert') showToast(`✓ ${qtyLabel} ${mProduct.name} → ${toBarName}`);
+  else showToast('✓ ' + mProduct.name + ' · ' + qtyLabel + ' · ' + mType);
 }
 
 function overlayClick(e) { if(e.target === document.getElementById('overlay')) closeOverlay(); }
@@ -1263,7 +1291,8 @@ function buildLog() {
       <span class="log-type-pill pill-${e.type}">${TYPE_DISPLAY[e.type] || e.type.toUpperCase()}</span>
       ${e.userDisplay ? `<span style="font-size:10px;color:var(--c-muted);font-family:var(--font-mono);flex-shrink:0;">${e.userDisplay}</span>` : ''}
       ${canDelete ? `<button class="log-delete" onclick="deleteLogEntry(${e.id})" title="Annuler cette saisie">✕</button>` : ''}
-      ${e.reason ? `<div class="log-reason">💬 ${esc(e.reason)}${e.recipient ? ` · <strong>${esc(e.recipient)}</strong>` : ''}</div>` : ''}`;
+      ${e.reason ? `<div class="log-reason">💬 ${esc(e.reason)}${e.recipient ? ` · <strong>${esc(e.recipient)}</strong>` : ''}</div>` : ''}
+      ${e.type === 'transfert' && e.toBarName ? `<div class="log-reason">→ ${esc(e.toBarName)}</div>` : ''}`;
     el.appendChild(div);
   });
 }
