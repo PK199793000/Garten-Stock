@@ -82,7 +82,7 @@ function toggleTheme() {
 //  SESSION PERSISTANTE (1h inactivité)
 // ════════════════════════════════
 const SESSION_KEY     = 'garten_session';
-const SESSION_TIMEOUT = 60 * 60 * 1000; // 1 heure en ms
+const SESSION_TIMEOUT = 8 * 60 * 60 * 1000; // 8 heures en ms
 
 function saveSession(userId) {
   localStorage.setItem(SESSION_KEY, JSON.stringify({ userId, lastActive: Date.now() }));
@@ -845,15 +845,21 @@ function buildBarSelector() {
 //  SWIPE POUR CHANGER DE BAR
 // ════════════════════════════════
 function initSwipe() {
-  let touchStartX = 0;
+  let touchStartX = 0, touchStartY = 0;
   const appEl = document.getElementById('app');
-  appEl.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, {passive:true});
+  appEl.addEventListener('touchstart', e => {
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }, {passive:true});
   appEl.addEventListener('touchend', e => {
     // Ne pas intercepter si un modal est ouvert
     if (document.getElementById('overlay').classList.contains('open')) return;
     if (document.getElementById('pin-overlay').classList.contains('open')) return;
     if (document.getElementById('cfg-overlay').classList.contains('open')) return;
     const dx = e.changedTouches[0].clientX - touchStartX;
+    const dy = e.changedTouches[0].clientY - touchStartY;
+    // Ignorer si le mouvement vertical est dominant (scroll)
+    if (Math.abs(dy) > Math.abs(dx)) return;
     if (Math.abs(dx) < 60) return;
     const visible = getVisibleBars();
     const idx = visible.findIndex(b => b.id === currentBar);
